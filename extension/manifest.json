@@ -1,18 +1,30 @@
 {
   "manifest_version": 3,
   "name": "PAVEL EDITOR",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "A Figma-style visual editor for any live web page. Click the icon to start editing; COPY FOR AI exports the changes.",
   "permissions": [
     "scripting"
   ],
   "action": {
-    "default_title": "PAVEL EDITOR \u00b7 click to edit this page"
+    "default_title": "PAVEL EDITOR \u00b7 click to edit this page",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "background": {
     "service_worker": "background.js"
   },
   "host_permissions": [
     "<all_urls>"
-  ]
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }
