@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="assets/icon.png" width="110" alt="">
-
-# PAVEL EDITOR
+![PAVEL EDITOR](assets/banner.jpg)
 
 **A Figma-style visual editor that runs inside any live web page.**
 
