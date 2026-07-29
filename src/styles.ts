@@ -124,6 +124,20 @@ export const EDITOR_CSS = `
 .pe-input.val { font-family: var(--pe-mono); font-size: 10.5px; }
 .pe-input.val.changed { color: var(--pe-mint); font-weight: 600; }
 
+/* the help button must be findable by someone who has never seen the tool:
+   always candy-lit, circular, the one button that never fades to grey */
+.pe-help {
+  width: 24px; height: 24px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 99px;
+  background: var(--pe-blue-dim);
+  border: 1px solid var(--pe-blue);
+  color: var(--pe-blue); font: inherit; font-size: 12px; font-weight: 800;
+  transition: background 120ms ease, transform 100ms ease;
+}
+.pe-help:hover { background: rgba(178,213,229,0.28); transform: scale(1.08); }
+.pe-help.on { background: var(--pe-blue); color: #16241f; }
+
 .pe-tabs { display: flex; gap: 2px; padding: 6px 10px; border-bottom: 1px solid var(--pe-border); flex: none; }
 .pe-tab {
   flex: 1; height: 26px; cursor: pointer; border: none; border-radius: 7px;

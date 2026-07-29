@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PAVEL EDITOR",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "A Figma-style visual editor for any live web page. Click the icon to start editing; COPY FOR AI exports the changes.",
   "permissions": [
     "scripting"

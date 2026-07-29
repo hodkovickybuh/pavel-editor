@@ -776,7 +776,7 @@ export function Panel({
         </span>
         <span className="pe-chip">{frameSpec ? `${frameSpec.w}×${frameSpec.h}` : "desktop"}</span>
         <span style={{ flex: 1 }} />
-        <button className={`pe-btn sm${showKeys ? " on" : ""}`} onClick={() => setShowKeys(!showKeys)} title="keys & gestures · ?">
+        <button className={`pe-help${showKeys ? " on" : ""}`} onClick={() => setShowKeys(!showKeys)} title="keys & gestures · ?">
           ?
         </button>
         <button className="pe-btn sm" onClick={onUndo} disabled={!canUndo} title="undo · cmd+Z">
