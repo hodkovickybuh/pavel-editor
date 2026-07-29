@@ -23,7 +23,15 @@ declare global {
     const host = document.createElement("div");
     host.setAttribute("data-editmode-ui", "");
     document.body.appendChild(host);
-    createRoot(host).render(<EditMode standalone />);
+    const root = createRoot(host);
+    root.render(<EditMode standalone />);
+    // the retire hook: when this page ends up inside a NEWER editor's device
+    // frame (mixed bundle versions from caches), the parent calls this to shut
+    // the embedded copy down cleanly instead of stacking panel on panel
+    (window as unknown as { __PAVEL_EDITOR_UNMOUNT__?: () => void }).__PAVEL_EDITOR_UNMOUNT__ = () => {
+      root.unmount();
+      host.remove();
+    };
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
   else mount();

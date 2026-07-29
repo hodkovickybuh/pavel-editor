@@ -395,6 +395,30 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     flash(`style pasted to ${els.length}`);
   }, [bump, flash, targetsOf]);
 
+  /** inline text editing, entered by Enter on a selection or by double-click */
+  const startTextEdit = useCallback(
+    (el: HTMLElement) => {
+      el.setAttribute("contenteditable", "plaintext-only");
+      // Firefox below 135 does not know plaintext-only; fall back
+      if (!el.isContentEditable) el.setAttribute("contenteditable", "true");
+      el.focus();
+      editingText.current = el;
+      const before = el.textContent ?? "";
+      const finish = () => {
+        el.removeAttribute("contenteditable");
+        editingText.current = null;
+        if ((el.textContent ?? "") !== before) {
+          store.setText(el, el.textContent ?? "", before);
+          flash("text changed · it lands in the report as a copy change");
+        }
+        el.removeEventListener("blur", finish);
+        bump();
+      };
+      el.addEventListener("blur", finish);
+    },
+    [flash, bump],
+  );
+
   /* --------------------------------------------------------- interactions */
 
   useEffect(() => {
@@ -712,24 +736,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
 
       if (e.key === "Enter") {
         e.preventDefault();
-        primary.setAttribute("contenteditable", "plaintext-only");
-        // Firefox below 135 does not know plaintext-only and leaves the element
-        // uneditable with no error; fall back to the plain flavour there
-        if (!primary.isContentEditable) primary.setAttribute("contenteditable", "true");
-        primary.focus();
-        editingText.current = primary;
-        const before = primary.textContent ?? "";
-        const finish = () => {
-          primary.removeAttribute("contenteditable");
-          editingText.current = null;
-          if ((primary.textContent ?? "") !== before) {
-            store.setText(primary, primary.textContent ?? "", before);
-            flash("copy changed: it will be flagged for the provenance check");
-          }
-          primary.removeEventListener("blur", finish);
-          bump();
-        };
-        primary.addEventListener("blur", finish);
+        startTextEdit(primary);
         return;
       }
 
@@ -762,13 +769,18 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       }
     };
 
+    // double-click: on TEXT it starts editing the words (the Figma instinct
+    // everyone has); on a container it drills into the group
     const onDouble = (e: MouseEvent) => {
       if ((e.target as HTMLElement)?.closest?.("[data-editmode-ui]")) return;
       if (modeRef.current !== "spacing") return;
       e.preventDefault();
       e.stopPropagation();
       const deep = pick(e.clientX, e.clientY, true);
-      if (deep) setSelection([deep]);
+      if (!deep) return;
+      setSelection([deep]);
+      const hasText = [...deep.childNodes].some((n) => n.nodeType === 3 && (n.textContent ?? "").trim());
+      if (hasText) startTextEdit(deep);
     };
 
     const swallow = (ev: Event) => {
@@ -834,7 +846,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         /* the iframe realm may already be gone */
       }
     };
-  }, [on, realmTick, pick, setSelection, flash, bump, nudge, copyStyle, pasteStyle, hideSelection, changes]);
+  }, [on, realmTick, pick, setSelection, flash, bump, nudge, copyStyle, pasteStyle, hideSelection, changes, startTextEdit]);
 
   /* ------------------------------------------------------ align & distribute */
 
@@ -942,6 +954,16 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
 
   const onFrameReady = useCallback(
     (win: Window, doc: Document) => {
+      // a cached OLD bundle inside the frame may have mounted its own editor
+      // before this guard generation existed; retire it
+      try {
+        const w = win as unknown as { __PAVEL_EDITOR__?: boolean; __PAVEL_EDITOR_UNMOUNT__?: () => void };
+        w.__PAVEL_EDITOR_UNMOUNT__?.();
+        w.__PAVEL_EDITOR__ = true;
+        doc.querySelectorAll("[data-editmode-ui]").forEach((n) => n.remove());
+      } catch {
+        /* cross-origin frame or torn-down realm: nothing to retire */
+      }
       setEditTarget(win, doc);
       setFrameRealm({ win, doc });
       setSelection([]);
