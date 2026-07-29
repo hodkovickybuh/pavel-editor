@@ -315,9 +315,22 @@ export function Overlay({
       {/* freehand circling marks: the drawn stroke stays with its note */}
       {(liveStroke || pins.some((p) => p.mark)) && (
         <svg style={{ ...base, inset: 0, width: "100vw", height: "100vh" }}>
-          {pins.filter((p) => p.mark).map((p) => (
-            <polyline key={p.n} points={p.mark} fill="none" stroke={COLOR.section} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
-          ))}
+          {pins.filter((p) => p.mark).map((p) => {
+            // "ox,oy|points": the stroke rides its element; the offset between
+            // the rect at draw time and the rect now IS the scroll/layout delta
+            const [origin, pts] = p.mark!.includes("|") ? p.mark!.split("|") : [null, p.mark!];
+            let transform: string | undefined;
+            if (origin) {
+              const [ox, oy] = origin.split(",").map(Number);
+              const r = p.el.getBoundingClientRect();
+              transform = `translate(${r.left - ox}, ${r.top - oy})`;
+            }
+            return (
+              <g key={p.n} transform={transform}>
+                <polyline points={pts} fill="none" stroke={COLOR.section} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
+              </g>
+            );
+          })}
           {liveStroke && <polyline points={liveStroke} fill="none" stroke={COLOR.section} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
         </svg>
       )}

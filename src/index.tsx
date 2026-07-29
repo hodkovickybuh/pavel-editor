@@ -398,6 +398,11 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   /** inline text editing, entered by Enter on a selection or by double-click */
   const startTextEdit = useCallback(
     (el: HTMLElement) => {
+      // a heads-up before styled fragments get flattened: committing an edit
+      // writes plain text, so an <em> or a styled span inside would be lost
+      if ([...el.children].length > 0) {
+        flash("this text has styled parts inside · double-click the exact styled part to keep the styling");
+      }
       el.setAttribute("contenteditable", "plaintext-only");
       // Firefox below 135 does not know plaintext-only; fall back
       if (!el.isContentEditable) el.setAttribute("contenteditable", "true");
@@ -637,7 +642,11 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       if (d.kind === "mark") {
         setLiveStroke(null);
         if (d.points.length > 4 && d.startEl) {
-          setNoteDraft({ el: d.startEl, text: "", mark: d.points.map(([x, y]) => `${x},${y}`).join(" ") });
+          // the stroke is stored RELATIVE to the circled element's rect, so it
+          // travels with the element on scroll instead of floating on screen
+          const r = d.startEl.getBoundingClientRect();
+          const pts = d.points.map(([x, y]) => `${x},${y}`).join(" ");
+          setNoteDraft({ el: d.startEl, text: "", mark: `${Math.round(r.left)},${Math.round(r.top)}|${pts}` });
         }
         return;
       }
