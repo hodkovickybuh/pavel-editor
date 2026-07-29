@@ -684,7 +684,21 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     };
 
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest?.("[data-editmode-ui]")) return;
+      const t = e.target as HTMLElement;
+      if (t?.closest?.("[data-editmode-ui]")) {
+        // focus lives in the panel after any click on it. Typing must keep its
+        // native behaviour, but undo/redo belong to the EDITOR wherever focus
+        // sits; without this, cmd+Z went dead until the next canvas click.
+        const typing = t.matches?.("input, select, textarea, [contenteditable], [contenteditable] *");
+        const meta = e.metaKey || e.ctrlKey;
+        if (!typing && meta && e.key.toLowerCase() === "z") {
+          e.preventDefault();
+          if (e.shiftKey) store.redo();
+          else store.undo();
+          bump();
+        }
+        return;
+      }
 
       if (editingText.current) {
         if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey)) {
