@@ -15,27 +15,33 @@
  *     terminal grafted onto it.
  */
 
-export const ACCENT = "#4c9df2";
-export const VIOLET = "#a78bfa";
+/**
+ * Palette v3, from Pavel's reference boards ("nice and not that loud"):
+ * Cosmic #23212C for surfaces, Wine Ash #32292F for depth, Candy Blue #B2D5E5
+ * as the single interactive accent, Turquoise #99E1D9 for the one primary
+ * action. Everything desaturated; the loud swatches (Lime) deliberately unused.
+ */
+export const ACCENT = "#b2d5e5";
+export const VIOLET = "#b7a6e8";
 
 export const EDITOR_CSS = `
 [data-editmode-ui], [data-editmode-ui] * { box-sizing: border-box; }
 
 [data-editmode-ui] {
-  --pe-bg: rgba(24,24,28,0.98);
-  --pe-well: rgba(255,255,255,0.045);
-  --pe-well-hi: rgba(255,255,255,0.09);
-  --pe-border: rgba(255,255,255,0.08);
-  --pe-border-hi: rgba(255,255,255,0.16);
-  --pe-text: #f2f2f5;
-  --pe-dim: #a3a3ad;
-  --pe-faint: #62626c;
+  --pe-bg: rgba(35,33,44,0.97);
+  --pe-well: rgba(240,240,250,0.05);
+  --pe-well-hi: rgba(240,240,250,0.1);
+  --pe-border: rgba(240,240,250,0.09);
+  --pe-border-hi: rgba(240,240,250,0.18);
+  --pe-text: #f0eff4;
+  --pe-dim: #a8a5b3;
+  --pe-faint: #66626f;
   --pe-blue: ${ACCENT};
-  --pe-blue-dim: rgba(76,157,242,0.16);
-  --pe-mint: #35d69f;
+  --pe-blue-dim: rgba(178,213,229,0.13);
+  --pe-mint: #99e1d9;
   --pe-violet: ${VIOLET};
-  --pe-violet-dim: rgba(167,139,250,0.16);
-  --pe-warn: #f5b04e;
+  --pe-violet-dim: rgba(183,166,232,0.15);
+  --pe-warn: #e8c07a;
   --pe-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   font-family: Inter, -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   font-size: 11.5px;
@@ -56,7 +62,7 @@ export const EDITOR_CSS = `
   background: var(--pe-bg);
   border: 1px solid var(--pe-border);
   border-radius: 13px;
-  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.5), 0 24px 70px rgba(0,0,0,0.55), 0 4px 14px rgba(0,0,0,0.35);
+  box-shadow: 0 0 0 0.5px rgba(10,8,14,0.6), 0 24px 70px rgba(10,8,14,0.5), 0 4px 14px rgba(10,8,14,0.35);
   backdrop-filter: blur(24px) saturate(1.1);
   -webkit-backdrop-filter: blur(24px) saturate(1.1);
   overflow: hidden;
@@ -73,7 +79,7 @@ export const EDITOR_CSS = `
 }
 .pe-head:active { cursor: grabbing; }
 .pe-title { font-weight: 650; font-size: 12px; letter-spacing: -0.01em; }
-.pe-title b { color: var(--pe-mint); font-weight: 750; }
+.pe-title b { color: var(--pe-blue); font-weight: 750; }
 .pe-chip {
   font-size: 10px; color: var(--pe-dim); font-family: var(--pe-mono);
   background: var(--pe-well); padding: 2px 8px; border-radius: 99px;
@@ -105,7 +111,7 @@ export const EDITOR_CSS = `
   transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 .pe-seg button:hover { color: var(--pe-text); }
-.pe-seg button.on { background: rgba(255,255,255,0.12); color: var(--pe-text); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.pe-seg button.on { background: rgba(178,213,229,0.16); color: var(--pe-blue); box-shadow: 0 1px 3px rgba(10,8,14,0.3); }
 
 .pe-input, .pe-select {
   height: 25px; background: var(--pe-well); border: 1px solid transparent; border-radius: 6px;
@@ -116,7 +122,7 @@ export const EDITOR_CSS = `
 .pe-input:focus, .pe-select:focus { outline: none; border-color: var(--pe-blue); background: var(--pe-well); }
 .pe-input::placeholder { color: var(--pe-faint); }
 .pe-input.val { font-family: var(--pe-mono); font-size: 10.5px; }
-.pe-input.val.changed { color: var(--pe-blue); font-weight: 600; }
+.pe-input.val.changed { color: var(--pe-mint); font-weight: 600; }
 
 .pe-tabs { display: flex; gap: 2px; padding: 6px 10px; border-bottom: 1px solid var(--pe-border); flex: none; }
 .pe-tab {
@@ -181,9 +187,9 @@ export const EDITOR_CSS = `
 
 .pe-cta {
   flex: 1; height: 34px; cursor: pointer; border: none; border-radius: 9px;
-  background: linear-gradient(180deg, #3fe3ab, #27c68c);
-  color: #04120c; font: inherit; font-size: 12px; font-weight: 700;
-  box-shadow: 0 2px 10px rgba(53,214,159,0.25), inset 0 1px 0 rgba(255,255,255,0.25);
+  background: linear-gradient(180deg, #a5e7de, #8ad4c9);
+  color: #16241f; font: inherit; font-size: 12px; font-weight: 700;
+  box-shadow: 0 2px 10px rgba(153,225,217,0.22), inset 0 1px 0 rgba(255,255,255,0.35);
   transition: filter 120ms ease, transform 80ms ease;
 }
 .pe-cta:hover { filter: brightness(1.06); }

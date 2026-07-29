@@ -15,15 +15,17 @@ import type { Box, Guide, Span } from "./geometry";
 import { centring } from "./geometry";
 import { shortLabel } from "./selectors";
 
+/** the canvas chrome, in the same quiet family as the panel: candy blue for
+    selection, turquoise for hover, soft rose for measurements */
 export const COLOR = {
-  hover: "#4ade80",
-  select: "#3b82f6",
-  section: "#a78bfa",
-  measure: "#f472b6",
-  guide: "#f472b6",
-  margin: "rgba(251,146,60,0.28)",
-  padding: "rgba(74,222,128,0.24)",
-  warn: "#fbbf24",
+  hover: "#99e1d9",
+  select: "#b2d5e5",
+  section: "#b7a6e8",
+  measure: "#e8a6c0",
+  guide: "#e8a6c0",
+  margin: "rgba(232,192,122,0.26)",
+  padding: "rgba(153,225,217,0.22)",
+  warn: "#e8c07a",
 };
 
 const base: React.CSSProperties = {
@@ -219,7 +221,7 @@ export function Overlay({
                   transform: "translateX(-50%)",
                   padding: "2px 7px",
                   background: COLOR.select,
-                  color: "#fff",
+                  color: "#16241f",
                   fontWeight: 700,
                   whiteSpace: "nowrap",
                 }}
