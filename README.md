@@ -15,27 +15,29 @@ Then press one button and hand the whole session to your AI assistant as a repor
 
 ## Get it
 
-**Chrome extension** (works on every site, even ones that block scripts):
+**The Chrome extension is the way.** It works on every site, including the ones that block scripts (github.com, banks, most big products). [**Download the extension zip from Releases**](../../releases/latest), unzip it, then:
 
 ```
-1. Code → Download ZIP → unzip
-2. chrome://extensions → Developer mode ON → Load unpacked → pick the extension/ folder
-3. Pin it. Click the icon on any page.
+1. chrome://extensions → turn on Developer mode (top right)
+2. Load unpacked → pick the unzipped folder
+3. Pin PAVEL EDITOR · click its icon on any page
 ```
 
-**Script tag** (for a site you own):
+![the extension editing github.com itself](assets/extension-on-github.png)
+
+**Script tag**, for a site you own:
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js"></script>
 ```
 
-**Console one-liner** (any running page; strict-CSP sites like github.com will refuse this, use the extension there):
+**Console one-liner**, for a page you own that is already running:
 
 ```js
 var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js';document.body.appendChild(s);
 ```
 
-**Next.js, dev only** (gated behind `?edit=1`): see `docs/nextjs-loader.md` pattern in the guide.
+> ⚠ The script tag and the console line only work on YOUR OWN pages (localhost, your deployed site). Sites you do not control usually send a Content-Security-Policy that blocks all outside scripts; if you see a "violates the following Content Security Policy" error, that is the page refusing, not the editor breaking. The extension is immune to this. Do not paste the console line on github.com and expect it to run.
 
 **Try it right now**: clone and open `demo/index.html`.
 
@@ -60,6 +62,7 @@ var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkov
 | **History** | ⌘Z across everything, one step per gesture, survives reloads and hot reloads |
 
 ![multi-select](assets/multiselect.png)
+![resize](assets/resize.png)
 
 ## The report
 

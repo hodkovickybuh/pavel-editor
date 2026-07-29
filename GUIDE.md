@@ -9,14 +9,14 @@ PAVEL EDITOR lets you redesign a real, live website the way you would move thing
 ## Opening it
 
 **Easiest, works everywhere: the Chrome extension.**
-1. Download this repository (green Code button → Download ZIP) and unzip it.
+1. Download `pavel-editor-extension.zip` from the repository's **Releases** page and unzip it.
 2. In Chrome, open `chrome://extensions`, switch on **Developer mode** (top right).
-3. Click **Load unpacked** and pick the `extension` folder from the unzip.
+3. Click **Load unpacked** and pick the unzipped folder.
 4. Pin PAVEL EDITOR to your toolbar. Now on ANY page, click the icon and the editor appears.
 
 **If the site's developer wired it in** (like uzo.com's dev setup): add `?edit=1` to the end of the address, for example `http://localhost:3000/?edit=1`.
 
-**One-off, no install:** open DevTools Console (View → Developer → JavaScript Console) and paste the loader line from the README. Note: a few strict sites (github.com, banks) block this method; the extension works there anyway.
+**One-off, no install:** open DevTools Console and paste the loader line from the README. This only works on pages YOU own (your localhost, your site). Strict sites like github.com refuse it with a "Content Security Policy" error; that is them, not you. The extension works there anyway.
 
 ## Your first five minutes
 

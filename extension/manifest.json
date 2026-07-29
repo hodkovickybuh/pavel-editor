@@ -3,7 +3,16 @@
   "name": "PAVEL EDITOR",
   "version": "1.0.0",
   "description": "A Figma-style visual editor for any live web page. Click the icon to start editing; COPY FOR AI exports the changes.",
-  "permissions": ["scripting", "activeTab"],
-  "action": { "default_title": "PAVEL EDITOR · click to edit this page" },
-  "background": { "service_worker": "background.js" }
+  "permissions": [
+    "scripting"
+  ],
+  "action": {
+    "default_title": "PAVEL EDITOR \u00b7 click to edit this page"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ]
 }

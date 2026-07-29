@@ -594,9 +594,9 @@ export function Panel({
                 <br />
                 drag a box to select several
                 <br />
-                drag a selected thing to <span style={{ color: "var(--pe-mint)" }}>move</span> it
+                drag a selected thing to <span style={{ color: "var(--pe-blue)" }}>move</span> it
                 <br />
-                drag its right or bottom edge to <span style={{ color: "var(--pe-mint)" }}>resize</span>
+                drag its right or bottom edge to <span style={{ color: "var(--pe-blue)" }}>resize</span>
                 <br />
                 <div style={{ color: "var(--pe-text)", fontWeight: 700, margin: "12px 0 6px", letterSpacing: "0.06em" }}>KEYS</div>
                 <span className="pe-key">⏎</span> edit text&nbsp;&nbsp;<span className="pe-key">N</span> pin a note
@@ -637,8 +637,8 @@ export function Panel({
                   )}
                   {matchCount > 1 && (
                     <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 6, cursor: "pointer", fontSize: 10.5 }}>
-                      <input type="checkbox" checked={scopeAll} onChange={(e) => setScopeAll(e.target.checked)} style={{ accentColor: "var(--pe-mint)" }} />
-                      <span style={{ color: scopeAll ? "var(--pe-mint)" : "var(--pe-dim)" }}>edit all {matchCount} matching</span>
+                      <input type="checkbox" checked={scopeAll} onChange={(e) => setScopeAll(e.target.checked)} style={{ accentColor: "var(--pe-blue)" }} />
+                      <span style={{ color: scopeAll ? "var(--pe-blue)" : "var(--pe-dim)" }}>edit all {matchCount} matching</span>
                     </label>
                   )}
                 </div>
@@ -770,11 +770,11 @@ export function Panel({
                         ) : ch.prop === "note" ? (
                           <span style={{ color: "var(--pe-violet)" }}>{ch.value}</span>
                         ) : (
-                          <>
-                            {ch.prop}: <span style={{ color: "var(--pe-mint)" }}>{ch.value}</span>{" "}
+                          <span className="mono">
+                            {ch.prop}: <span style={{ color: "var(--pe-blue)" }}>{ch.value}</span>{" "}
                             <span style={{ color: "var(--pe-faint)" }}>was {ch.base}</span>
                             {(ch.vw ?? 1440) <= 900 && <span style={{ color: "var(--pe-warn)" }}> @{ch.vw}px</span>}
-                          </>
+                          </span>
                         )}
                       </div>
                     </div>
