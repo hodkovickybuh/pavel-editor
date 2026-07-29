@@ -85,6 +85,9 @@ type Drag =
       els: HTMLElement[];
       topBases: number[];
       bottomBases: number[];
+      leftBases: number[];
+      rightBases: number[];
+      trBases: Array<[number, number]>;
       rect: DOMRect;
       peers: DOMRect[];
       moved: boolean;
@@ -103,7 +106,8 @@ type Drag =
       starts: DragStart[];
       moved: boolean;
     }
-  | { kind: "section"; el: HTMLElement; startY: number };
+  | { kind: "section"; el: HTMLElement; startY: number }
+  | { kind: "mark"; points: Array<[number, number]>; startEl: HTMLElement | null };
 
 /** the props cmd+C captures: the visual identity of an element, not its layout */
 const CLIP_NUMERIC: NumProp[] = [
@@ -119,7 +123,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       Keeping them apart is what makes "off" reversible instead of a dead end. */
   const [armed, setArmed] = useState(false);
   const [on, setOn] = useState(false);
-  const [mode, setMode] = useState<"spacing" | "sections">("spacing");
+  const [mode, setMode] = useState<"spacing" | "sections" | "mark">("spacing");
   const [tab, setTab] = useState<Tab>("design");
   const [moveMode, setMoveMode] = useState<MoveMode>("isolate");
   const [selection, setSelectionState] = useState<HTMLElement[]>([]);
@@ -139,7 +143,9 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     B: store.hasVariant("B"),
   });
   const [activeVariant, setActiveVariant] = useState<"A" | "B" | null>(null);
-  const [noteDraft, setNoteDraft] = useState<{ el: HTMLElement; text: string } | null>(null);
+  const [noteDraft, setNoteDraft] = useState<{ el: HTMLElement; text: string; mark?: string } | null>(null);
+  /** the stroke being drawn right now, as an SVG points string */
+  const [liveStroke, setLiveStroke] = useState<string | null>(null);
   /** the device frame, and the realm handle once its document is ready */
   const [frameSpec, setFrameSpec] = useState<FrameSpec | null>(null);
   const [frameRealm, setFrameRealm] = useState<{ win: Window; doc: Document } | null>(null);
@@ -154,7 +160,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   // current values through refs rather than a stale closure
   const selRef = useRef<HTMLElement[]>([]);
   const drag = useRef<Drag | null>(null);
-  const modeRef = useRef(mode);
+  const modeRef = useRef<"spacing" | "sections" | "mark">(mode);
   const moveModeRef = useRef(moveMode);
   const editingText = useRef<HTMLElement | null>(null);
   const styleClip = useRef<{ nums: Partial<Record<NumProp, number>>; strs: Record<string, string> } | null>(null);
@@ -193,7 +199,9 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   useEffect(() => {
     // standalone (the injected script) arms on load: loading it IS the intent.
     // As an in-repo dev component it stays inert until the URL carries ?edit=1.
-    if (standalone || new URLSearchParams(window.location.search).has("edit")) {
+    const q = new URLSearchParams(window.location.search);
+    if (q.has("pe-frame") || window.name === "pavel-editor-frame") return;
+    if (standalone || q.has("edit")) {
       setArmed(true);
       setOn(true);
     }
@@ -298,6 +306,19 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     [bump, targetsOf],
   );
 
+  /** raw CSS value (10vw, 50%, 3rem) typed into a numeric field */
+  const applyRaw = useCallback(
+    (prop: string, value: string) => {
+      const els = targetsOf(selRef.current);
+      if (!els.length) return;
+      const batch: Parameters<typeof store.commit>[0] = [];
+      els.forEach((el) => store.setStyle(el, prop, value, batch));
+      store.commit(batch);
+      bump();
+    },
+    [bump, targetsOf],
+  );
+
   const applyStyle = useCallback(
     (prop: string, value: string) => {
       const els = targetsOf(selRef.current);
@@ -316,9 +337,12 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       if (!els.length) return;
       const batch: Parameters<typeof store.commit>[0] = [];
       els.forEach((el) => {
-        store.set(el, "margin-top", readProp(el, "margin-top") + delta, batch);
         if (moveModeRef.current === "isolate") {
-          store.set(el, "margin-bottom", readProp(el, "margin-bottom") - delta, batch, { comp: true });
+          const tr = csOf(el).translate;
+          const parts = !tr || tr === "none" ? [0, 0] : tr.split(" ").map((v) => parseFloat(v) || 0);
+          store.setStyle(el, "translate", `${Math.round(parts[0] ?? 0)}px ${Math.round((parts[1] ?? 0) + delta)}px`, batch);
+        } else {
+          store.set(el, "margin-top", readProp(el, "margin-top") + delta, batch);
         }
       });
       store.commit(batch);
@@ -394,6 +418,18 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       e.preventDefault();
       e.stopPropagation();
 
+      if (modeRef.current === "mark") {
+        // freehand circling: the stroke lands as a note pinned to the element
+        // under its first point, Claude-review style
+        const at = edDoc().elementFromPoint(e.clientX, e.clientY);
+        drag.current = {
+          kind: "mark",
+          points: [[e.clientX, e.clientY]],
+          startEl: at && isEditable(at) ? nearestBlock(at) : null,
+        };
+        return;
+      }
+
       if (modeRef.current === "sections") {
         if (!el) return;
         drag.current = { kind: "section", el, startY: e.clientY };
@@ -428,6 +464,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
             starts: [
               { key: `${p}|width`, before: store.changes.get(`${p}|width`) },
               { key: `${p}|height`, before: store.changes.get(`${p}|height`) },
+              { key: `${p}|max-width`, before: store.changes.get(`${p}|max-width`) },
             ],
             moved: false,
           };
@@ -450,15 +487,23 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
           els,
           topBases: els.map((x) => readProp(x, "margin-top")),
           bottomBases: els.map((x) => readProp(x, "margin-bottom")),
+          leftBases: els.map((x) => readProp(x, "margin-left")),
+          rightBases: els.map((x) => readProp(x, "margin-right")),
+          trBases: els.map((x) => {
+            const tr = csOf(x).translate;
+            if (!tr || tr === "none") return [0, 0] as [number, number];
+            const parts = tr.split(" ").map((v) => parseFloat(v) || 0);
+            return [parts[0] ?? 0, parts[1] ?? 0] as [number, number];
+          }),
           rect: rectOf(el),
           peers,
           moved: false,
           starts: els.flatMap((x) => {
             const p = store.pathOf(x);
-            return [
-              { key: `${p}|margin-top`, before: store.changes.get(`${p}|margin-top`) },
-              { key: `${p}|margin-bottom`, before: store.changes.get(`${p}|margin-bottom`) },
-            ];
+            return ["margin-top", "margin-left", "translate"].map((prop) => ({
+              key: `${p}|${prop}`,
+              before: store.changes.get(`${p}|${prop}`),
+            }));
           }),
         };
         edDoc().body.style.cursor = "grabbing";
@@ -491,20 +536,29 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         // element must not write a snapped 4px margin change
         if (!d.moved && Math.abs(e.clientX - d.startX) < 5 && Math.abs(e.clientY - d.startY) < 5) return;
         d.moved = true;
-        const raw = e.clientY - d.startY;
-        const { delta, guides: g } = e.altKey
-          ? { delta: raw, guides: [] } // alt suspends snapping
-          : snapVertical(d.rect, raw, d.peers);
-        // live writes only: the single undo step for the gesture lands on
-        // pointerup via commitDrag, instead of one step per pointermove
+        // FREE 2D MOVE: both axes at once, the way a canvas tool drags. The
+        // vertical axis keeps sibling-edge snapping; the horizontal snaps to
+        // the 4px grid. Solo mode compensates the opposite margin on BOTH axes
+        // so the element's occupied box never changes and nothing else shifts.
+        const rawY = e.clientY - d.startY;
+        const rawX = e.clientX - d.startX;
+        const { delta, guides: g } = e.altKey ? { delta: rawY, guides: [] } : snapVertical(d.rect, rawY, d.peers);
+        const dx = e.altKey ? rawX : Math.round(rawX / 4) * 4;
         d.els.forEach((el, i) => {
-          store.writeLive(el, "margin-top", d.topBases[i] + delta);
-          if (moveModeRef.current === "isolate") store.writeLive(el, "margin-bottom", d.bottomBases[i] - delta);
+          if (moveModeRef.current === "isolate") {
+            // SOLO = the translate property: by definition it repositions the
+            // element without touching layout, on any display type. The old
+            // negative-margin pairing leaked a few px around inline elements
+            // (line-box arithmetic) and read as noise in the report.
+            const [bx, by] = d.trBases[i];
+            store.writeLiveRaw(el, "translate", `${Math.round(bx + dx)}px ${Math.round(by + delta)}px`);
+          } else {
+            store.writeLive(el, "margin-top", d.topBases[i] + delta);
+            store.writeLive(el, "margin-left", d.leftBases[i] + dx);
+          }
         });
         setGuides(g);
-        // computed from the drag's own numbers, not read back from the DOM: a
-        // style read right after a write forces a reflow on every frame
-        setNote(`${delta > 0 ? "+" : ""}${Math.round(delta)}px · margin-top ${Math.round(d.topBases[0] + delta)}`);
+        setNote(`${dx >= 0 ? "+" : ""}${Math.round(dx)}, ${delta >= 0 ? "+" : ""}${Math.round(delta)}px`);
         bump();
         return;
       }
@@ -512,11 +566,25 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       if (d?.kind === "resize") {
         if (!d.moved && Math.abs(e.clientX - d.startX) < 3 && Math.abs(e.clientY - d.startY) < 3) return;
         d.moved = true;
-        if (d.edge !== "s") store.writeLive(d.el, "width", d.baseW + (e.clientX - d.startX));
+        if (d.edge !== "s") {
+          const w = d.baseW + (e.clientX - d.startX);
+          store.writeLive(d.el, "width", w);
+          // a max-width ceiling (very common on text blocks) silently wins over
+          // width, which read as "the text cannot be stretched"; growing past
+          // the ceiling raises the ceiling with it
+          const mw = csOf(d.el).maxWidth;
+          if (mw !== "none" && w > parseFloat(mw)) store.writeLive(d.el, "max-width", w);
+        }
         if (d.edge !== "e") store.writeLive(d.el, "height", d.baseH + (e.clientY - d.startY));
         const r = rectOf(d.el);
         setNote(`${Math.round(r.width)} × ${Math.round(r.height)}`);
         bump();
+        return;
+      }
+
+      if (d?.kind === "mark") {
+        d.points.push([e.clientX, e.clientY]);
+        setLiveStroke(d.points.map(([x, y]) => `${x},${y}`).join(" "));
         return;
       }
 
@@ -541,6 +609,14 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       const d = drag.current;
       endDrag();
       if (!d) return;
+
+      if (d.kind === "mark") {
+        setLiveStroke(null);
+        if (d.points.length > 4 && d.startEl) {
+          setNoteDraft({ el: d.startEl, text: "", mark: d.points.map(([x, y]) => `${x},${y}`).join(" ") });
+        }
+        return;
+      }
 
       if (d.kind === "marquee") {
         if (!d.moved) setSelection(d.clicked ? [d.clicked] : []);
@@ -909,10 +985,13 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     );
   }
 
-  const pins = changes
+  const pins: Array<{ el: HTMLElement; text: string; n: number; mark?: string }> = [];
+  changes
     .filter((c) => c.prop === "note")
-    .map((c, i) => ({ el: fromDomPath(c.path), text: c.value, n: i + 1 }))
-    .filter((p): p is { el: HTMLElement; text: string; n: number } => !!p.el);
+    .forEach((c, idx) => {
+      const el = fromDomPath(c.path);
+      if (el) pins.push({ el, text: c.value, n: idx + 1, mark: c.mark });
+    });
 
   const overlayEl = (
     <Overlay
@@ -927,6 +1006,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       showCentring={showCentring}
       note={note}
       pins={pins}
+      liveStroke={liveStroke}
     />
   );
 
@@ -976,6 +1056,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         }}
         onCopy={copyReport}
         onSet={applyProp}
+        onSetRaw={applyRaw}
         onSetStyle={applyStyle}
         onAlign={align}
         onDistribute={distribute}
@@ -1039,7 +1120,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
             onKeyDown={(e) => {
               e.stopPropagation();
               if (e.key === "Enter") {
-                store.setNote(noteDraft.el, noteDraft.text);
+                store.setNote(noteDraft.el, noteDraft.text, noteDraft.mark);
                 setNoteDraft(null);
                 bump();
               }

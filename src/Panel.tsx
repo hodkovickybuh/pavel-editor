@@ -45,11 +45,13 @@ function BoxVal({
   value,
   changed,
   onSet,
+  onSetRaw,
   title,
 }: {
   value: number;
   changed: boolean;
   onSet: (v: number) => void;
+  onSetRaw?: (v: string) => void;
   title: string;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -61,7 +63,9 @@ function BoxVal({
         title={title}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
-          if (draft !== "" && Number.isFinite(Number(draft))) onSet(Number(draft));
+          const t = draft.trim();
+          if (t !== "" && Number.isFinite(Number(t))) onSet(Number(t));
+          else if (onSetRaw && /^-?\d*\.?\d+(%|vw|vh|dvh|svh|lvh|vmin|vmax|rem|em|ch)$/.test(t)) onSetRaw(t);
           setDraft(null);
         }}
         onKeyDown={(e) => {
@@ -119,11 +123,13 @@ function BoxModel({
   changedKeys,
   path,
   onSet,
+  onSetRaw,
 }: {
   el: HTMLElement;
   changedKeys: Set<string>;
   path: string | null;
   onSet: (prop: NumProp, v: number) => void;
+  onSetRaw: (prop: string, v: string) => void;
 }) {
   const v = (p: NumProp) => readProp(el, p);
   const chg = (p: string) => !!path && changedKeys.has(`${path}|${p}`);
@@ -148,10 +154,10 @@ function BoxModel({
         "rgba(200,155,107,0.20)",
         "1px dashed rgba(200,155,107,0.6)",
         "margin",
-        <BoxVal title="margin-top" value={v("margin-top")} changed={chg("margin-top")} onSet={(x) => onSet("margin-top", x)} />,
-        <BoxVal title="margin-right" value={v("margin-right")} changed={chg("margin-right")} onSet={(x) => onSet("margin-right", x)} />,
-        <BoxVal title="margin-bottom" value={v("margin-bottom")} changed={chg("margin-bottom")} onSet={(x) => onSet("margin-bottom", x)} />,
-        <BoxVal title="margin-left" value={v("margin-left")} changed={chg("margin-left")} onSet={(x) => onSet("margin-left", x)} />,
+        <BoxVal title="margin-top" value={v("margin-top")} changed={chg("margin-top")} onSet={(x) => onSet("margin-top", x)} onSetRaw={(x) => onSetRaw("margin-top", x)} />,
+        <BoxVal title="margin-right" value={v("margin-right")} changed={chg("margin-right")} onSet={(x) => onSet("margin-right", x)} onSetRaw={(x) => onSetRaw("margin-right", x)} />,
+        <BoxVal title="margin-bottom" value={v("margin-bottom")} changed={chg("margin-bottom")} onSet={(x) => onSet("margin-bottom", x)} onSetRaw={(x) => onSetRaw("margin-bottom", x)} />,
+        <BoxVal title="margin-left" value={v("margin-left")} changed={chg("margin-left")} onSet={(x) => onSet("margin-left", x)} onSetRaw={(x) => onSetRaw("margin-left", x)} />,
         ring(
           "rgba(240,239,244,0.06)",
           "1px solid rgba(240,239,244,0.35)",
@@ -164,14 +170,14 @@ function BoxModel({
             "rgba(153,225,217,0.16)",
             "1px dashed rgba(153,225,217,0.55)",
             "padding",
-            <BoxVal title="padding-top" value={v("padding-top")} changed={chg("padding-top")} onSet={(x) => onSet("padding-top", x)} />,
-            <BoxVal title="padding-right" value={v("padding-right")} changed={chg("padding-right")} onSet={(x) => onSet("padding-right", x)} />,
-            <BoxVal title="padding-bottom" value={v("padding-bottom")} changed={chg("padding-bottom")} onSet={(x) => onSet("padding-bottom", x)} />,
-            <BoxVal title="padding-left" value={v("padding-left")} changed={chg("padding-left")} onSet={(x) => onSet("padding-left", x)} />,
+            <BoxVal title="padding-top" value={v("padding-top")} changed={chg("padding-top")} onSet={(x) => onSet("padding-top", x)} onSetRaw={(x) => onSetRaw("padding-top", x)} />,
+            <BoxVal title="padding-right" value={v("padding-right")} changed={chg("padding-right")} onSet={(x) => onSet("padding-right", x)} onSetRaw={(x) => onSetRaw("padding-right", x)} />,
+            <BoxVal title="padding-bottom" value={v("padding-bottom")} changed={chg("padding-bottom")} onSet={(x) => onSet("padding-bottom", x)} onSetRaw={(x) => onSetRaw("padding-bottom", x)} />,
+            <BoxVal title="padding-left" value={v("padding-left")} changed={chg("padding-left")} onSet={(x) => onSet("padding-left", x)} onSetRaw={(x) => onSetRaw("padding-left", x)} />,
             <div style={{ background: "rgba(178,213,229,0.22)", border: "1px solid rgba(178,213,229,0.6)", borderRadius: 5, padding: "3px 6px", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, minHeight: 24 }}>
-              <BoxVal title="width" value={Math.round(r.width)} changed={chg("width")} onSet={(x) => onSet("width", x)} />
+              <BoxVal title="width" value={Math.round(r.width)} changed={chg("width")} onSet={(x) => onSet("width", x)} onSetRaw={(x) => onSetRaw("width", x)} />
               ×
-              <BoxVal title="height" value={Math.round(r.height)} changed={chg("height")} onSet={(x) => onSet("height", x)} />
+              <BoxVal title="height" value={Math.round(r.height)} changed={chg("height")} onSet={(x) => onSet("height", x)} onSetRaw={(x) => onSetRaw("height", x)} />
             </div>,
           ),
         ),
@@ -214,6 +220,7 @@ function NumRow({
   changed,
   el,
   onSet,
+  onSetRaw,
   onResetKey,
 }: {
   prop: NumProp;
@@ -222,6 +229,8 @@ function NumRow({
   changed: boolean;
   el: HTMLElement;
   onSet: (v: number) => void;
+  /** a typed value carrying its own unit: 10vw, 50%, 3rem, 40dvh */
+  onSetRaw: (v: string) => void;
   onResetKey?: () => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -271,7 +280,13 @@ function NumRow({
         value={draft ?? (mixed ? "mixed" : String(value))}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
-          if (draft !== null && draft !== "" && Number.isFinite(Number(draft))) onSet(Number(draft));
+          if (draft !== null && draft !== "") {
+            const t = draft.trim();
+            // a plain number stays px; a unit suffix writes the raw value, so
+            // responsive units (vw, %, dvh, rem...) are first-class
+            if (Number.isFinite(Number(t))) onSet(Number(t));
+            else if (/^-?\d*\.?\d+(%|vw|vh|dvh|svh|lvh|vmin|vmax|rem|em|ch|fr)$/.test(t)) onSetRaw(t);
+          }
           setDraft(null);
         }}
         onKeyDown={(e) => {
@@ -512,6 +527,7 @@ export function Panel({
   onResetOne,
   onCopy,
   onSet,
+  onSetRaw,
   onSetStyle,
   onAlign,
   onDistribute,
@@ -531,8 +547,8 @@ export function Panel({
   setHover,
   tick,
 }: {
-  mode: "spacing" | "sections";
-  setMode: (m: "spacing" | "sections") => void;
+  mode: "spacing" | "sections" | "mark";
+  setMode: (m: "spacing" | "sections" | "mark") => void;
   tab: Tab;
   setTab: (t: Tab) => void;
   selection: HTMLElement[];
@@ -556,6 +572,7 @@ export function Panel({
   onResetOne: (key: string) => void;
   onCopy: () => void;
   onSet: (prop: NumProp, value: number) => void;
+  onSetRaw: (prop: string, value: string) => void;
   onSetStyle: (prop: string, value: string) => void;
   onAlign: (edge: "left" | "centre" | "right") => void;
   onDistribute: () => void;
@@ -697,6 +714,9 @@ export function Panel({
               </button>
               <button className={mode === "sections" ? "on" : ""} onClick={() => setMode("sections")} title="Tab · drag whole sections to reorder the page">
                 sections
+              </button>
+              <button className={mode === "mark" ? "on" : ""} onClick={() => setMode("mark")} title="circle anything on the page and attach a note to it, review-style">
+                ✎ mark
               </button>
             </div>
             <button className={`pe-btn${frameSpec ? " on" : ""}`} onClick={() => (frameSpec ? onCloseFrame() : onOpenFrame())} title="preview and edit at a real device size">
@@ -853,7 +873,7 @@ export function Panel({
                 )}
 
                 {/* the box model replaces the spacing and padding row-groups */}
-                <BoxModel el={primary} changedKeys={changedKeys} path={primaryPath} onSet={onSet} />
+                <BoxModel el={primary} changedKeys={changedKeys} path={primaryPath} onSet={onSet} onSetRaw={onSetRaw} />
 
                 {/* numeric groups */}
                 {GROUPS.filter((g) => g.title !== "spacing" && g.title !== "padding").map((g) => {
@@ -879,6 +899,7 @@ export function Panel({
                                 changed={!!primaryPath && changedKeys.has(`${primaryPath}|${prop}`)}
                                 el={primary}
                                 onSet={(v) => onSet(prop, v)}
+                                onSetRaw={(v) => onSetRaw(prop, v)}
                                 onResetKey={() => primaryPath && onResetOne(`${primaryPath}|${prop}`)}
                               />
                             );

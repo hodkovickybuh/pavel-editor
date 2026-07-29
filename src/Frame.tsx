@@ -41,6 +41,10 @@ export function Frame({
   const src = useMemo(() => {
     const u = new URL(window.location.href);
     u.searchParams.delete("edit");
+    // the marker that tells a page-embedded copy of the editor NOT to mount:
+    // sites that load the bundle via a script tag would otherwise boot a second
+    // editor inside the frame, panel on panel
+    u.searchParams.set("pe-frame", "1");
     return u.pathname + u.search;
   }, []);
 
@@ -167,6 +171,7 @@ export function Frame({
         }}
       >
         <iframe
+          name="pavel-editor-frame"
           ref={iframeRef}
           src={src}
           style={{ width: spec.w, height: spec.h, border: "none", display: "block", background: "#000" }}

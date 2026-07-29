@@ -117,6 +117,7 @@ export function Overlay({
   showCentring,
   note,
   pins,
+  liveStroke,
 }: {
   hover: HTMLElement | null;
   selection: HTMLElement[];
@@ -129,7 +130,9 @@ export function Overlay({
   showCentring: boolean;
   note: string | null;
   /** numbered design notes pinned to elements, violet, exported in the report */
-  pins: Array<{ el: HTMLElement; text: string; n: number }>;
+  pins: Array<{ el: HTMLElement; text: string; n: number; mark?: string }>;
+  /** the freehand circling stroke currently being drawn, SVG points */
+  liveStroke: string | null;
 }) {
   const primary = selection[0] ?? null;
   const c = showCentring && primary ? centring(primary) : null;
@@ -308,6 +311,16 @@ export function Overlay({
           </div>
         );
       })}
+
+      {/* freehand circling marks: the drawn stroke stays with its note */}
+      {(liveStroke || pins.some((p) => p.mark)) && (
+        <svg style={{ ...base, inset: 0, width: "100vw", height: "100vh" }}>
+          {pins.filter((p) => p.mark).map((p) => (
+            <polyline key={p.n} points={p.mark} fill="none" stroke={COLOR.section} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
+          ))}
+          {liveStroke && <polyline points={liveStroke} fill="none" stroke={COLOR.section} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
+        </svg>
+      )}
 
       {marquee && (
         <div

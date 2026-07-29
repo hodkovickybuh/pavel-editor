@@ -15,6 +15,9 @@ declare global {
 
 (() => {
   if (window.__PAVEL_EDITOR__) return; // loading twice must not mount twice
+  // inside the editor's own device frame the PARENT is the editor; a second
+  // copy in here would stack panel on panel
+  if (new URLSearchParams(window.location.search).has("pe-frame") || window.name === "pavel-editor-frame") return;
   window.__PAVEL_EDITOR__ = true;
   const mount = () => {
     const host = document.createElement("div");

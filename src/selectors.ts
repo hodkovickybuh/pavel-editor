@@ -142,6 +142,7 @@ export const STYLE_PROPS: Record<string, StyleSpec> = {
   filter: { kind: "text", css: "filter", label: "filter", placeholder: "blur(4px)" },
   "backdrop-filter": { kind: "text", css: "backdropFilter", label: "backdrop", placeholder: "blur(10px)" },
   transform: { kind: "text", css: "transform", label: "transform", placeholder: "rotate(2deg)" },
+  translate: { kind: "text", css: "translate", label: "translate", placeholder: "40px -12px" },
 };
 
 export type StyleProp = keyof typeof STYLE_PROPS;
@@ -163,7 +164,7 @@ export const STYLE_GROUPS: Array<{ title: string; props: string[] }> = [
   },
   { title: "fill & stroke", props: ["background-color", "border-style", "border-color"] },
   { title: "flex", props: ["display", "flex-direction", "justify-content", "align-items", "flex-wrap"] },
-  { title: "effects", props: ["box-shadow", "filter", "backdrop-filter", "transform", "position"] },
+  { title: "effects", props: ["box-shadow", "filter", "backdrop-filter", "translate", "transform", "position"] },
 ];
 
 export function readStyle(el: HTMLElement, prop: string): string {

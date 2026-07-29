@@ -51,6 +51,8 @@ You never have to think about how; the report explains it to the developer.
 | restyle every matching card at once | tick **edit all N matching** |
 | copy one element's look onto another | **⌘C** on the first, select the second, **⌘V** |
 | leave a comment instead of an edit | press **N**, type ("this needs more drama"), enter |
+| circle something, like a review | switch to **✎ mark**, draw around it, type the note |
+| use responsive units | type `10vw`, `50%` or `40dvh` straight into any number field |
 | preview on iPhone | press **device**, pick a size; you can keep editing inside it |
 | edit margins/padding visually | the nested box diagram in the panel; click any number in it |
 | compare with the original | press **before/after**; click again to come back |

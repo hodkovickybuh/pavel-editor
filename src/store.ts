@@ -52,6 +52,8 @@ export type Change = {
   /** the hashed-class runtime selector + match index: the cross-realm resolver */
   rtSel?: string;
   rtIdx?: number;
+  /** a freehand stroke (SVG points) when the note was drawn as a circling mark */
+  mark?: string;
 };
 
 /**
@@ -279,7 +281,13 @@ class EditStore {
     const path = domPath(el);
     const key = `${path}|${prop}`;
     const before = this.changes.get(key);
-    const base = before ? before.base : readStyle(el, prop);
+    // numeric PROPS can also arrive here carrying a raw unit ("10vw"); their
+    // base must come off the computed style, which readStyle does not cover
+    const base = before
+      ? before.base
+      : prop in STYLE_PROPS
+        ? readStyle(el, prop)
+        : `${readProp(el, prop as NumProp)}${PROPS[prop as NumProp]?.unit ?? ""}`;
     const d = describe(el);
     const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, ...runtimeRef(el) };
 
@@ -316,12 +324,12 @@ class EditStore {
    * undo history, persistence and report as every real change, because half of
    * what needs saying about a layout is intent, not a value.
    */
-  setNote(el: HTMLElement, text: string) {
+  setNote(el: HTMLElement, text: string, mark?: string) {
     const path = domPath(el);
     const key = `${path}|note`;
     const before = this.changes.get(key);
     const d = describe(el);
-    const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop: "note", base: "", value: text, vw: edWin().innerWidth, ...runtimeRef(el) };
+    const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop: "note", base: "", value: text, vw: edWin().innerWidth, mark, ...runtimeRef(el) };
     if (!text.trim()) this.changes.delete(key);
     else this.changes.set(key, next);
     this.commit([{ key, before, after: this.changes.get(key) }]);
@@ -371,6 +379,26 @@ class EditStore {
       this.changes.set(key, {
         key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value: value2, vw: edWin().innerWidth, ...runtimeRef(el),
       });
+    this.dirty = true;
+    this.listeners.forEach((fn) => fn());
+  }
+
+  /** the writeLive twin for string-valued props (translate during solo drags) */
+  writeLiveRaw(el: HTMLElement, prop: string, value: string) {
+    this.ensureLive();
+    if (!cssKeyOf(prop)) return;
+    const path = domPath(el);
+    const key = `${path}|${prop}`;
+    const before = this.changes.get(key);
+    const base = before
+      ? before.base
+      : prop in STYLE_PROPS
+        ? readStyle(el, prop)
+        : `${readProp(el, prop as NumProp)}${PROPS[prop as NumProp]?.unit ?? ""}`;
+    const d = describe(el);
+    el.style.setProperty(prop, value === base ? "" : value);
+    if (value === base) this.changes.delete(key);
+    else this.changes.set(key, { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, ...runtimeRef(el) });
     this.dirty = true;
     this.listeners.forEach((fn) => fn());
   }
@@ -559,8 +587,13 @@ class EditStore {
           for (const [, list] of byProp) {
             const c = list[list.length - 1];
             const conflict = new Set(list.map((x) => x.value)).size > 1;
+            // px is what direct manipulation measures; the applier picks the
+            // codebase's own units, so size props carry the vw equivalent
+            const pxv = /^-?\d+(\.\d+)?px$/.test(c.value) ? parseFloat(c.value) : null;
+            const sizeProp = ["width", "max-width", "height", "font-size"].includes(String(c.prop));
             const tags = [
               `was ${c.base}`,
+              pxv !== null && sizeProp && c.vw ? `≈ ${((pxv / c.vw) * 100).toFixed(1)}vw at the stated viewport` : "",
               c.comp ? "isolate-move pair: keeps everything below in place, apply together with the margin-top above" : "",
               conflict ? `CONFLICT: ${list.length} elements set different values, last one shown` : "",
             ].filter(Boolean);

@@ -51,7 +51,7 @@ var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkov
 | | |
 |---|---|
 | **Select** | click · shift+click · marquee · double-click drills into groups · ←/→ walks the tree |
-| **Move** | drag anything. `solo` moves just that element (the Figma feeling); `push` shows honest CSS flow |
+| **Move** | drag anything, anywhere, both axes. `solo` (default) moves just that element via `translate`, nothing else shifts; `push` shows honest CSS flow |
 | **Resize** | drag the right/bottom edge, live W×H readout |
 | **Snap & measure** | sibling-edge guides, 4px grid, alt+hover distances, a permanent centring readout |
 | **Inspect** | margins, padding, size, gaps, typography, colour, shadows, flex, with scrubbable Figma-style inputs |
@@ -59,6 +59,8 @@ var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkov
 | **Scope** | "edit all N matching" restyles every element sharing the rule at once |
 | **Text** | enter to edit copy inline |
 | **Notes** | N pins design intent to an element; notes export with the report |
+| **Mark** | circle anything freehand, review-style, and attach a note to the circled element |
+| **Units** | drag measures in px; type `10vw`, `50%`, `40dvh`, `3rem` into any field and it is written as authored |
 | **Style clipboard** | ⌘C / ⌘V copies the look of one element onto another |
 | **Device frame** | a real viewport emulator (iPhone/iPad/laptop presets, custom, rotate); phone CSS actually runs, and phone-made edits are tagged for the right media query |
 | **Box model** | the DevTools diagram, but editable: click any margin/padding/size number in place |
