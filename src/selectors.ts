@@ -370,10 +370,12 @@ export function sectionLabel(el: Element, index: number) {
   const own = moduleClassOf(el);
   const file = own?.file.replace(".module.css", "");
   if (file && file !== "Section") return file;
-  const heading = el.querySelector("h1, h2")?.textContent?.trim().replace(/\s+/g, " ");
+  const heading = el.querySelector("h1, h2, h3, h4")?.textContent?.trim().replace(/\s+/g, " ");
   if (heading) return `"${heading.slice(0, 30)}${heading.length > 30 ? "…" : ""}"`;
   if (el.id) return `#${el.id}`;
-  return `section ${index + 1}`;
+  const first = el.classList?.[0];
+  if (first) return `.${first} ${index + 1}`;
+  return `${el.tagName.toLowerCase()} ${index + 1}`;
 }
 
 /**
@@ -416,6 +418,71 @@ export function fromDomPath(path: string): HTMLElement | null {
     if (!node || node.tagName.toLowerCase() !== m[1]) return null;
   }
   return (node as HTMLElement) ?? null;
+}
+
+/**
+ * Which stylesheet rule ACTUALLY sets a property on this element. On sites with
+ * no CSS modules the describe() fallback could only say "(global css) h1",
+ * which forces the report's applier to hunt. This walks every readable sheet,
+ * respects media queries, matches each selector against the element, and ranks
+ * by specificity then source order, i.e. the cascade. Cached per element+prop:
+ * a drag writes at frame rate and must not walk the CSSOM per frame.
+ */
+const winCache = new WeakMap<Element, Map<string, { selector: string; file: string } | null>>();
+export function winningRuleFor(el: Element, prop: string): { selector: string; file: string } | null {
+  let perEl = winCache.get(el);
+  if (perEl?.has(prop)) return perEl.get(prop)!;
+  const win = el.ownerDocument.defaultView ?? window;
+  type Hit = { sel: string; file: string; spec: number; order: number };
+  const state: { best: Hit | null } = { best: null };
+  let order = 0;
+  const walk = (rules: CSSRuleList, file: string) => {
+    for (const r of Array.from(rules)) {
+      order += 1;
+      const name = r.constructor.name;
+      if (name === "CSSMediaRule" || name === "CSSSupportsRule") {
+        const grouped = r as CSSMediaRule;
+        try {
+          if (name === "CSSSupportsRule" || win.matchMedia(grouped.conditionText).matches) walk(grouped.cssRules, file);
+        } catch {
+          /* unparseable condition */
+        }
+        continue;
+      }
+      const sr = r as CSSStyleRule;
+      if (typeof sr.selectorText !== "string" || !sr.style?.getPropertyValue(prop)) continue;
+      for (const part of sr.selectorText.split(",")) {
+        const p = part.trim();
+        try {
+          if (!el.matches(p)) continue;
+        } catch {
+          continue;
+        }
+        const spec =
+          (p.match(/#/g)?.length ?? 0) * 100 +
+          (p.match(/\.|\[|:(?!:)/g)?.length ?? 0) * 10 +
+          (p.match(/(^|[\s>+~])[a-z]/gi)?.length ?? 0);
+        const b = state.best;
+        if (!b || spec > b.spec || (spec === b.spec && order >= b.order)) state.best = { sel: p, file, spec, order };
+      }
+    }
+  };
+  for (const sheet of Array.from(el.ownerDocument.styleSheets)) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    walk(rules, sheet.href ? sheet.href.split("/").pop()! : "(inline <style>)");
+  }
+  const res = state.best ? { selector: state.best.sel, file: state.best.file } : null;
+  if (!perEl) {
+    perEl = new Map();
+    winCache.set(el, perEl);
+  }
+  perEl.set(prop, res);
+  return res;
 }
 
 /** the wrapper whose children are the page's top-level sections */

@@ -95,6 +95,7 @@ type Drag =
           can commit the WHOLE drag as one undo step */
       starts: DragStart[];
     }
+  | { kind: "reorder"; el: HTMLElement; parent: HTMLElement; startIdx: number; moved: boolean }
   | {
       kind: "resize";
       el: HTMLElement;
@@ -238,6 +239,36 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       w.removeEventListener("resize", f);
     };
   }, [on, bump, realmTick]);
+
+  // SELF-HEAL: when the HOST app re-renders (its own React state, a route
+  // change), nodes are replaced and inline previews vanish. Watch the tree,
+  // re-apply the session's changes to the new nodes, and prune dead selections.
+  useEffect(() => {
+    if (!on) return;
+    let timer = 0;
+    const obs = new MutationObserver((muts) => {
+      if (muts.every((m) => (m.target as HTMLElement).closest?.("[data-editmode-ui]"))) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const alive = selRef.current.filter((el) => el.isConnected);
+        if (alive.length !== selRef.current.length) {
+          setSelection(alive);
+          if (!alive.length) flash("the page re-rendered · selection released");
+        }
+        store.restoreFromStorage();
+        bump();
+      }, 400);
+    });
+    try {
+      obs.observe(edDoc().body, { childList: true, subtree: true });
+    } catch {
+      /* realm gone */
+    }
+    return () => {
+      window.clearTimeout(timer);
+      obs.disconnect();
+    };
+  }, [on, realmTick, setSelection, flash, bump]);
 
   // the parent page must not scroll behind the device frame
   useEffect(() => {
@@ -398,22 +429,18 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   /** inline text editing, entered by Enter on a selection or by double-click */
   const startTextEdit = useCallback(
     (el: HTMLElement) => {
-      // a heads-up before styled fragments get flattened: committing an edit
-      // writes plain text, so an <em> or a styled span inside would be lost
-      if ([...el.children].length > 0) {
-        flash("this text has styled parts inside · double-click the exact styled part to keep the styling");
-      }
       el.setAttribute("contenteditable", "plaintext-only");
       // Firefox below 135 does not know plaintext-only; fall back
       if (!el.isContentEditable) el.setAttribute("contenteditable", "true");
       el.focus();
       editingText.current = el;
       const before = el.textContent ?? "";
+      const beforeHtml = el.innerHTML;
       const finish = () => {
         el.removeAttribute("contenteditable");
         editingText.current = null;
-        if ((el.textContent ?? "") !== before) {
-          store.setText(el, el.textContent ?? "", before);
+        if (el.innerHTML !== beforeHtml) {
+          store.setText(el, el.textContent ?? "", before, beforeHtml);
           flash("text changed · it lands in the report as a copy change");
         }
         el.removeEventListener("blur", finish);
@@ -436,7 +463,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       setGuides([]);
       setNote(null);
       setMarquee(null);
-      if (d?.kind === "section") d.el.style.opacity = "";
+      if (d?.kind === "section" || d?.kind === "reorder") d.el.style.opacity = "";
     };
 
     const onDown = (e: PointerEvent) => {
@@ -499,6 +526,31 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
           };
           edDoc().body.style.cursor = nearE && nearS ? "nwse-resize" : nearE ? "ew-resize" : "ns-resize";
           return;
+        }
+      }
+
+      // FLEX/GRID REORDER: inside an auto-layout-ish parent, a drag means
+      // "change my place in the row", the Figma instinct. The click usually
+      // lands on a heading INSIDE the card, so climb from the selection to the
+      // nearest ancestor that is a direct child of a flex/grid container and
+      // reorder THAT. Alt keeps the free translate move.
+      if (el && selRef.current.length === 1 && selRef.current[0] === el && !e.altKey) {
+        let child: HTMLElement | null = el;
+        let hops = 0;
+        while (child && hops < 4) {
+          const par: HTMLElement | null = child.parentElement;
+          if (par) {
+            const disp = csOf(par).display;
+            const kids = [...par.children].filter((c) => isElem(c) && !c.hasAttribute("data-editmode-ui"));
+            if ((disp.includes("flex") || disp.includes("grid")) && kids.length > 1) {
+              drag.current = { kind: "reorder", el: child, parent: par, startIdx: kids.indexOf(child), moved: false };
+              child.style.opacity = "0.5";
+              edDoc().body.style.cursor = "grabbing";
+              return;
+            }
+          }
+          child = par;
+          hops += 1;
         }
       }
 
@@ -592,6 +644,30 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         return;
       }
 
+      if (d?.kind === "reorder") {
+        d.moved = true;
+        const kids = [...d.parent.children].filter(
+          (c): c is HTMLElement => isElem(c) && !c.hasAttribute("data-editmode-ui") && c !== d.el,
+        );
+        // reading order: the pointer belongs before the first sibling whose
+        // row it is above, or whose centre it is left of within the same row
+        let target: HTMLElement | null = null;
+        for (const k of kids) {
+          const r = rectOf(k);
+          if (e.clientY < r.top + r.height / 2 || (e.clientY < r.bottom && e.clientX < r.left + r.width / 2)) {
+            target = k;
+            break;
+          }
+        }
+        const already = target ? d.el.nextElementSibling === target : d.parent.lastElementChild === d.el;
+        if (!already) {
+          d.parent.insertBefore(d.el, target);
+          bump();
+        }
+        setNote("reordering · alt+drag moves freely instead");
+        return;
+      }
+
       if (d?.kind === "resize") {
         if (!d.moved && Math.abs(e.clientX - d.startX) < 3 && Math.abs(e.clientY - d.startY) < 3) return;
         d.moved = true;
@@ -654,6 +730,15 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       if (d.kind === "marquee") {
         if (!d.moved) setSelection(d.clicked ? [d.clicked] : []);
         else flash(`${selRef.current.length} selected`);
+        return;
+      }
+
+      if (d.kind === "reorder") {
+        if (d.moved) {
+          const kids = [...d.parent.children].filter((c): c is HTMLElement => isElem(c) && !c.hasAttribute("data-editmode-ui"));
+          store.setOrder(kids.map((k, idx) => sectionLabel(k, idx)), d.parent);
+          flash("reordered · the report tells the applier the new order (preview, refresh restores)");
+        }
         return;
       }
 

@@ -20,6 +20,7 @@ import {
   readStyle,
   round,
   runtimeRef,
+  winningRuleFor,
 } from "./selectors";
 import { edWin, isElem } from "./context";
 
@@ -54,6 +55,9 @@ export type Change = {
   rtIdx?: number;
   /** a freehand stroke (SVG points) when the note was drawn as a circling mark */
   mark?: string;
+  /** innerHTML snapshots for text edits, so styled fragments survive undo/restore */
+  baseHtml?: string;
+  valueHtml?: string;
 };
 
 /**
@@ -61,6 +65,16 @@ export type Change = {
  * first: it survives the desktop/frame DOM differences that shift nth-child
  * paths. The path is the fallback for elements no module class reaches.
  */
+/** describe(), upgraded by the cascade: when no CSS-module file is known, name
+    the stylesheet rule that actually wins for this property */
+function describeFor(el: HTMLElement, prop: string) {
+  const d = describe(el);
+  if (d.file) return d;
+  const w = winningRuleFor(el, prop);
+  if (w) return { file: w.file, selector: w.selector, label: `${w.file} ${w.selector}` };
+  return d;
+}
+
 function resolveTarget(c: Pick<Change, "path" | "rtSel" | "rtIdx">): HTMLElement | null {
   if (c.rtSel) {
     try {
@@ -129,7 +143,13 @@ class EditStore {
       if (c.prop === "order" || c.prop === "note") continue;
       const el = resolveTarget(c);
       if (!el) continue;
-      if (c.prop === "text") el.textContent = this.previewOff ? c.base : c.value;
+      if (c.prop === "text") {
+        if (this.previewOff) {
+          if (c.baseHtml != null) el.innerHTML = c.baseHtml;
+          else el.textContent = c.base;
+        } else if (c.valueHtml != null) el.innerHTML = c.valueHtml;
+        else el.textContent = c.value;
+      }
       else if (c.prop === "image") {
         const url = this.imgUrls.get(c.key);
         (el as HTMLImageElement).src = this.previewOff ? c.base : (url ?? c.base);
@@ -175,23 +195,32 @@ class EditStore {
       return false;
     }
     this.ensureLive();
+    const prev = new Map(this.changes);
     // clear the current state back to originals, then replay the variant
     for (const c of this.changes.values()) {
       const el = resolveTarget(c);
       if (!el || c.prop === "order" || c.prop === "note") continue;
-      if (c.prop === "text") el.textContent = c.base;
-      else if (c.prop !== "image") el.style.setProperty(String(c.prop), "");
+      if (c.prop === "text") {
+        if (c.baseHtml != null) el.innerHTML = c.baseHtml;
+        else el.textContent = c.base;
+      } else if (c.prop !== "image") el.style.setProperty(String(c.prop), "");
     }
     this.changes.clear();
     for (const c of saved) {
       const el = resolveTarget(c);
       if (el) {
-        if (c.prop === "text") el.textContent = c.value;
-        else if (c.prop !== "note" && c.prop !== "order") el.style.setProperty(String(c.prop), c.value);
+        if (c.prop === "text") {
+          if (c.valueHtml != null) el.innerHTML = c.valueHtml;
+          else el.textContent = c.value;
+        } else if (c.prop !== "note" && c.prop !== "order") el.style.setProperty(String(c.prop), c.value);
       }
       this.changes.set(c.key, c);
     }
-    this.undoStack.length = 0;
+    // the swap is ONE undo step over the union of both states, so cmd+Z after
+    // loading a variant returns exactly to where the page stood before it
+    const keys = new Set([...prev.keys(), ...this.changes.keys()]);
+    const batch: Snapshot[] = [...keys].map((key) => ({ key, before: prev.get(key), after: this.changes.get(key) }));
+    this.undoStack.push(batch);
     this.redoStack.length = 0;
     this.emit();
     return true;
@@ -237,7 +266,7 @@ class EditStore {
     const before = this.changes.get(key);
     const base = before ? before.base : `${readProp(el, prop)}${spec.unit}`;
 
-    const d = describe(el);
+    const d = describeFor(el, prop);
     const next: Change = {
       key,
       path,
@@ -288,7 +317,7 @@ class EditStore {
       : prop in STYLE_PROPS
         ? readStyle(el, prop)
         : `${readProp(el, prop as NumProp)}${PROPS[prop as NumProp]?.unit ?? ""}`;
-    const d = describe(el);
+    const d = describeFor(el, prop);
     const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, ...runtimeRef(el) };
 
     el.style.setProperty(prop, value === base ? "" : value);
@@ -307,13 +336,15 @@ class EditStore {
    * el.textContent already holds the new copy, and recording that as the base
    * made undo restore the edit onto itself.
    */
-  setText(el: HTMLElement, text: string, original: string) {
+  setText(el: HTMLElement, text: string, original: string, htmlOriginal?: string) {
     const path = domPath(el);
     const key = `${path}|text`;
     const before = this.changes.get(key);
     const base = before ? before.base : original;
     const d = describe(el);
-    const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop: "text", base, value: text, ...runtimeRef(el) };
+    // markup travels with the change: undo and restore write innerHTML when it
+    // exists, so an <em> inside an edited headline survives the round trip
+    const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop: "text", base, value: text, baseHtml: before ? before.baseHtml : htmlOriginal, valueHtml: el.innerHTML, ...runtimeRef(el) };
     if (text === base) this.changes.delete(key);
     else this.changes.set(key, next);
     this.commit([{ key, before, after: this.changes.get(key) }]);
@@ -335,15 +366,16 @@ class EditStore {
     this.commit([{ key, before, after: this.changes.get(key) }]);
   }
 
-  setOrder(labels: string[]) {
-    const key = "page|order";
+  setOrder(labels: string[], container?: HTMLElement) {
+    const key = container ? `${domPath(container)}|order` : "page|order";
     const before = this.changes.get(key);
+    const d = container ? describe(container) : null;
     const next: Change = {
       key,
-      path: "page",
-      label: "page section order",
-      file: "app/components/landing-v2/HomeV2.tsx",
-      selector: "PAGE_ORDER",
+      path: container ? domPath(container) : "page",
+      label: container ? `children of ${d!.label}` : "page section order",
+      file: d?.file ?? null,
+      selector: d?.selector ?? "PAGE_ORDER",
       prop: "order",
       base: before?.base ?? "",
       value: labels.join("\n"),
@@ -371,7 +403,7 @@ class EditStore {
     const key = `${path}|${prop}`;
     const before = this.changes.get(key);
     const base = before ? before.base : `${readProp(el, prop)}${spec.unit}`;
-    const d = describe(el);
+    const d = describeFor(el, prop);
     const value2 = `${v}${spec.unit}`;
     el.style.setProperty(prop, value2 === base ? "" : value2);
     if (value2 === base) this.changes.delete(key);
@@ -395,7 +427,7 @@ class EditStore {
       : prop in STYLE_PROPS
         ? readStyle(el, prop)
         : `${readProp(el, prop as NumProp)}${PROPS[prop as NumProp]?.unit ?? ""}`;
-    const d = describe(el);
+    const d = describeFor(el, prop);
     el.style.setProperty(prop, value === base ? "" : value);
     if (value === base) this.changes.delete(key);
     else this.changes.set(key, { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, ...runtimeRef(el) });
@@ -444,8 +476,14 @@ class EditStore {
     const el = ref ? resolveTarget(ref) : fromDomPath(path);
     if (!el) return;
     if (prop === "text") {
-      const original = snap.before?.base ?? snap.after?.base;
-      el.textContent = c ? c.value : (original ?? el.textContent ?? "");
+      if (c) {
+        if (c.valueHtml != null) el.innerHTML = c.valueHtml;
+        else el.textContent = c.value;
+      } else {
+        const src = snap.before ?? snap.after;
+        if (src?.baseHtml != null) el.innerHTML = src.baseHtml;
+        else el.textContent = src?.base ?? el.textContent ?? "";
+      }
       return;
     }
     if (prop === "image") {
@@ -531,8 +569,10 @@ class EditStore {
     for (const c of saved) {
       const el = resolveTarget(c);
       if (!el) continue;
-      if (c.prop === "text") el.textContent = c.value;
-      else if (c.prop !== "note") {
+      if (c.prop === "text") {
+        if (c.valueHtml != null) el.innerHTML = c.valueHtml;
+        else el.textContent = c.value;
+      } else if (c.prop !== "note") {
         const css = cssKeyOf(c.prop);
         if (!css) continue;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -555,7 +595,7 @@ class EditStore {
     const images = all.filter((c) => c.prop === "image");
     const text = all.filter((c) => c.prop === "text");
     const notes = all.filter((c) => c.prop === "note");
-    const order = all.find((c) => c.prop === "order");
+    const orders = all.filter((c) => c.prop === "order");
 
     const lines = [
       `PAVEL EDITOR REPORT   ${location.pathname}   viewport ${edWin().innerWidth}x${edWin().innerHeight}`,
@@ -632,13 +672,13 @@ class EditStore {
       lines.push("");
     }
 
-    if (order) {
-      lines.push("SECTION ORDER (reorder the JSX in HomeV2.tsx to match)");
+    for (const order of orders) {
+      lines.push(`REORDER · ${order.label} (change the markup/JSX order to match)`);
       order.value.split("\n").forEach((n, i) => lines.push(`  ${i + 1}. ${n}`));
       lines.push("");
     }
 
-    if (!spacing.length && !text.length && !notes.length && !images.length && !order) lines.push("(nothing changed yet)");
+    if (!spacing.length && !text.length && !notes.length && !images.length && !orders.length) lines.push("(nothing changed yet)");
     return lines.join("\n");
   }
 }

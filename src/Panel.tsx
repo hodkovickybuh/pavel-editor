@@ -303,6 +303,16 @@ function NumRow({
   );
 }
 
+const RECENTS_KEY = "pe-recent-colors";
+function pushRecent(v: string) {
+  try {
+    const cur: string[] = JSON.parse(localStorage.getItem(RECENTS_KEY) ?? "[]");
+    localStorage.setItem(RECENTS_KEY, JSON.stringify([v, ...cur.filter((c) => c !== v)].slice(0, 8)));
+  } catch {
+    /* fine */
+  }
+}
+
 function ColorRow({
   label,
   value,
@@ -315,6 +325,17 @@ function ColorRow({
   onSet: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const set = (v: string) => {
+    pushRecent(v);
+    onSet(v);
+  };
+  const recents: string[] = useMemo(() => {
+    try {
+      return open ? JSON.parse(localStorage.getItem(RECENTS_KEY) ?? "[]") : [];
+    } catch {
+      return [];
+    }
+  }, [open]);
   const hex = toHex(value);
   const hasEyedropper = typeof window !== "undefined" && "EyeDropper" in window;
   return (
@@ -330,7 +351,7 @@ function ColorRow({
         <input
           type="color"
           value={hex}
-          onChange={(e) => onSet(e.target.value)}
+          onChange={(e) => set(e.target.value)}
           style={{ width: 22, height: 18, padding: 0, border: "1px solid var(--pe-border)", background: "transparent", cursor: "pointer" }}
         />
         {hasEyedropper && (
@@ -341,7 +362,7 @@ function ColorRow({
               try {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const res = await new (window as any).EyeDropper().open();
-                onSet(res.sRGBHex);
+                set(res.sRGBHex);
               } catch {
                 /* dismissed */
               }
@@ -357,13 +378,22 @@ function ColorRow({
           {tokens.length === 0 && (
             <span style={{ color: "var(--pe-faint)", gridColumn: "1 / -1", fontSize: 9 }}>no design tokens found on this site</span>
           )}
+          {recents.length > 0 && (
+            <span style={{ gridColumn: "1 / -1", color: "var(--pe-faint)", fontSize: 9 }}>recent</span>
+          )}
+          {recents.map((c) => (
+            <button key={"r" + c} className="pe-swatch" title={c} onClick={() => { set(c); setOpen(false); }} style={{ aspectRatio: "1", width: "100%", height: "auto", background: c }} />
+          ))}
+          {tokens.length > 0 && (
+            <span style={{ gridColumn: "1 / -1", color: "var(--pe-faint)", fontSize: 9 }}>tokens</span>
+          )}
           {tokens.map((t) => (
             <button
               key={t.name}
               className="pe-swatch"
               title={t.name}
               onClick={() => {
-                onSet(t.value);
+                set(t.value);
                 setOpen(false);
               }}
               style={{ aspectRatio: "1", width: "100%", height: "auto", background: t.value }}

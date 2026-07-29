@@ -63,6 +63,10 @@ var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkov
 | **Units** | drag measures in px; type `10vw`, `50%`, `40dvh`, `3rem` into any field and it is written as authored |
 | **Style clipboard** | ⌘C / ⌘V copies the look of one element onto another |
 | **Device frame** | a real viewport emulator (iPhone/iPad/laptop presets, custom, rotate); phone CSS actually runs, and phone-made edits are tagged for the right media query |
+| **Reorder** | drag a card inside a flex/grid row to change its place, auto-layout style; alt+drag moves freely instead |
+| **Hover x-ray** | hovering anything shades its margins and padding, DevTools style |
+| **Winning rule** | on plain-CSS sites the report names the actual stylesheet rule that sets each property |
+| **Self-healing** | if the site's own code re-renders, your edits re-apply and dead selections release |
 | **Box model** | the DevTools diagram, but editable: click any margin/padding/size number in place |
 | **Before / after** | one button flips the whole page between the original and your edits |
 | **A/B variants** | save two directions, click between them, ship the winner |

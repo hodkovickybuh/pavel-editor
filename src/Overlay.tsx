@@ -153,6 +153,10 @@ export function Overlay({
 
       {showSpacing && selection.map((el, i) => <SpacingBands key={i} el={el} />)}
 
+      {/* the DevTools instinct: hovering anything shades its margins and
+          padding, no toggle needed; the toggle governs the SELECTION bands */}
+      {hover && !selection.includes(hover) && !sectionsMode && <SpacingBands el={hover} />}
+
       {/* hover */}
       {hover && !selection.includes(hover) && (
         <>
