@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8"><title>PAVEL EDITOR · demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--bg:#0b0b0e;--ink:#ededf2;--dim:#8b8b96;--mint:#3ae6a4;--violet:#a78bfa;--card:#131318;--line:#232329}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:ui-sans-serif,-apple-system,"Helvetica Neue",sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 32px}
+nav{display:flex;align-items:center;gap:28px;padding:20px 0;border-bottom:1px solid var(--line)}
+nav b{letter-spacing:.14em;font-size:14px}nav b i{color:var(--mint);font-style:normal}
+nav a{color:var(--dim);text-decoration:none;font-size:13px}
+.hero{padding:96px 0 72px}
+.hero .kicker{color:var(--mint);font-size:12px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:20px}
+.hero h1{font-size:56px;line-height:1.05;font-weight:800;max-width:16ch}
+.hero h1 em{color:var(--violet);font-style:italic}
+.hero p{color:var(--dim);font-size:18px;line-height:1.6;max-width:52ch;margin-top:22px}
+.cta{display:inline-block;margin-top:32px;background:var(--mint);color:#07120d;font-weight:700;padding:14px 26px;text-decoration:none;font-size:14px;letter-spacing:.04em}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:48px 0 96px}
+.card{background:var(--card);border:1px solid var(--line);padding:26px}
+.card h3{font-size:16px;margin-bottom:10px}
+.card p{color:var(--dim);font-size:13.5px;line-height:1.6}
+@media (max-width:760px){.hero h1{font-size:36px}.grid{grid-template-columns:1fr}}
+</style></head><body>
+<div class="wrap">
+<nav><b>DEMO<i>SITE</i></b><a href="#">Product</a><a href="#">Pricing</a><a href="#">About</a></nav>
+<section class="hero">
+  <div class="kicker">A playground for the editor</div>
+  <h1>Design on the <em>real</em> page, not a mockup of it</h1>
+  <p>Everything here is editable. Click the headline, drag the button, resize a card, pin a note. Then press COPY FOR AI and look at what you get.</p>
+  <a class="cta" href="#">Try dragging me</a>
+</section>
+<section class="grid">
+  <div class="card"><h3>Cards to align</h3><p>Select all three with a marquee, then hit even gaps.</p></div>
+  <div class="card"><h3>Rules that repeat</h3><p>Edit one card with "edit all matching" on and watch the others follow.</p></div>
+  <div class="card"><h3>Honest CSS</h3><p>Every change you make maps to a real rule in the report.</p></div>
+</section>
+</div>
+<script src="../dist/pavel-editor.js"></script>
+</body></html>

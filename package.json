@@ -4,7 +4,7 @@
   "description": "A Figma-style visual editor that runs inside any live web page. Drag, restyle, annotate, then export a report your AI assistant can apply to the real stylesheets.",
   "license": "MIT",
   "scripts": {
-    "build": "esbuild src/main.tsx --bundle --format=iife --outfile=dist/pavel-editor.js --minify --define:process.env.NODE_ENV=\\\"production\\\" --jsx=automatic --target=es2020",
+    "build": "esbuild src/main.tsx --bundle --format=iife --outfile=dist/pavel-editor.js --minify --define:process.env.NODE_ENV=\\\"production\\\" --jsx=automatic --target=es2020 && cp dist/pavel-editor.js extension/pavel-editor.js",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

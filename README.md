@@ -1,56 +1,73 @@
-# PAVEL EDITOR
+<div align="center">
 
-A Figma-style visual editor that runs inside any live web page. Click things, drag them, restyle them, pin notes, preview at device sizes, then press one button and hand the whole session to your AI assistant as a report it can apply to your real stylesheets.
+# ✎ PAVEL EDITOR
 
-No build step, no framework requirement, no server. One script tag.
+**A Figma-style visual editor that runs inside any live web page.**
 
-## Use it
+Click things. Drag them. Restyle them. Preview on any device. Pin notes.
+Then press one button and hand the whole session to your AI assistant as a report it applies to your real stylesheets.
 
-On any page (yours or a friend's project):
+*No build step · no framework requirement · no server · one script*
+
+![PAVEL EDITOR](assets/editor.png)
+
+</div>
+
+## Get it
+
+**Chrome extension** (works on every site, even ones that block scripts):
+
+```
+1. Code → Download ZIP → unzip
+2. chrome://extensions → Developer mode ON → Load unpacked → pick the extension/ folder
+3. Pin it. Click the icon on any page.
+```
+
+**Script tag** (for a site you own):
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js"></script>
 ```
 
-Or paste this in the browser console on a running page:
+**Console one-liner** (any running page; strict-CSP sites like github.com will refuse this, use the extension there):
 
 ```js
 var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js';document.body.appendChild(s);
 ```
 
-In a Next.js app, load it in development only:
+**Next.js, dev only** (gated behind `?edit=1`): see `docs/nextjs-loader.md` pattern in the guide.
 
-```tsx
-{process.env.NODE_ENV === "development" && (
-  <script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js" async />
-)}
-```
+**Try it right now**: clone and open `demo/index.html`.
 
-The panel appears top right. The page's own links and buttons are disabled while the editor is on; press the x to collapse it to an EDIT pill and get the page back.
+> New to this? Read **[the Guide](GUIDE.md)**, written for designers who never touch code.
 
 ## What it does
 
 | | |
 |---|---|
-| **Select** | click · shift+click adds · drag a box for several · double-click drills into a group · ←/→ walk the tree · esc deselects |
-| **Move** | drag any selected element. `push` mode is honest CSS (followers move too); `isolate` moves the element alone by compensating its own margin-bottom |
-| **Snap** | sibling-edge guides plus a 4px grid while dragging; alt suspends snapping |
-| **Measure** | alt+hover any other element for Figma-style distance readouts; a centring readout shows exactly how off-centre a selection is |
-| **Inspect** | margins, padding, gaps, max-width, typography, colours, shadows, flex controls. Labels scrub like Figma inputs (drag them; shift x10, alt fine) |
-| **Colour** | your design tokens (the `:root` CSS variables) as swatches first, then a native picker and the system eyedropper |
-| **Scope** | "edit all N matching" applies a change to every element sharing the rule |
-| **Text** | press enter on a selection and type |
-| **Notes** | press N, type intent ("this needs more drama"); notes pin to elements and export with the report |
-| **Style clipboard** | cmd+C copies an element's visual style, cmd+V applies it to another |
-| **Device frame** | Chrome-style viewport emulator (iPhone/iPad/laptop presets, custom sizes, rotate). It is a real viewport: your phone CSS actually runs, and edits made there are tagged so they land in the right media query |
-| **History** | cmd+Z / shift+cmd+Z across everything; a drag or a scrub is one step. Edits survive reloads and hot reloads |
-| **Sections** | Tab switches to section mode; drag whole page sections to reorder |
+| **Select** | click · shift+click · marquee · double-click drills into groups · ←/→ walks the tree |
+| **Move** | drag anything. `solo` moves just that element (the Figma feeling); `push` shows honest CSS flow |
+| **Resize** | drag the right/bottom edge, live W×H readout |
+| **Snap & measure** | sibling-edge guides, 4px grid, alt+hover distances, a permanent centring readout |
+| **Inspect** | margins, padding, size, gaps, typography, colour, shadows, flex, with scrubbable Figma-style inputs |
+| **Colour** | the site's own design tokens as swatches first, then a picker and the system eyedropper |
+| **Scope** | "edit all N matching" restyles every element sharing the rule at once |
+| **Text** | enter to edit copy inline |
+| **Notes** | N pins design intent to an element; notes export with the report |
+| **Style clipboard** | ⌘C / ⌘V copies the look of one element onto another |
+| **Device frame** | a real viewport emulator (iPhone/iPad/laptop presets, custom, rotate); phone CSS actually runs, and phone-made edits are tagged for the right media query |
+| **Sections** | Tab, then drag whole page sections to reorder |
+| **History** | ⌘Z across everything, one step per gesture, survives reloads and hot reloads |
+
+![multi-select](assets/multiselect.png)
 
 ## The report
 
-`COPY FOR AI` puts a structured report on the clipboard. When the site uses CSS modules, hashed classes are decoded back to their source file and selector, so the report reads like a patch:
+`COPY FOR AI` exports the session. Hashed CSS-module classes are decoded back to their source file and selector, so the report reads like a patch:
 
 ```
+PAVEL EDITOR REPORT   /   viewport 1560x960
+
 STYLE CHANGES (desktop viewport)
   HeroFlow.module.css
     .lead h1 {
@@ -61,21 +78,26 @@ STYLE CHANGES MADE AT A NARROW VIEWPORT (scope these in the phone media query)
   ...
 
 NOTES (design intent, no CSS attached; act on these too)
-  HeroFlow .lead h1: make this bolder
+  section.hero a.cta: make this pop way more
 ```
 
-Paste it to Claude (or any assistant) and ask it to apply the changes to the stylesheets.
+Paste it to Claude, Cursor, or a colleague. The stylesheet stays the source of truth; the editor is the conversation about it.
 
-## Notes on honesty
+![changes](assets/changes.png)
+![device](assets/device.png)
 
-The editor edits inline styles on the live DOM. That is a preview, not a deploy: the report is the artefact, your stylesheet is the source of truth. Duplicating an element is preview-only and says so. Section reorder is preview-only and a refresh restores it. When a rule you are editing is shared, the panel warns you how many elements it moves.
+## Honesty rules
+
+The editor previews with inline styles on the live DOM; it never writes your code. Duplicates are preview-only and say so. Section reorder is preview-only; refresh restores. Editing a shared rule warns you how many elements it moves. There is no pen tool and no components, because a live page has no honest equivalent.
 
 ## Develop
 
 ```
 bun install
-bun run build     # dist/pavel-editor.js
+bun run build       # dist/pavel-editor.js + extension/pavel-editor.js
 bun run typecheck
 ```
 
-MIT.
+After pushing an update, purge the CDN: `curl https://purge.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js`
+
+MIT · built by Pavel with Claude

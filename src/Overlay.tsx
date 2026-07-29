@@ -171,36 +171,70 @@ export function Overlay({
         </>
       )}
 
-      {/* selection: every member outlined, the primary one labelled */}
+      {/* selection: every member outlined; the primary gets Figma-style corner
+          handles and a dimensions chip. Handles are visual affordances only,
+          the resize hit zones live on the element's actual edges. */}
       {selection.map((el, i) => {
         const r = el.getBoundingClientRect();
-        return (
+        const primary = i === 0;
+        const handle = (x: number, y: number, k: string) => (
           <div
-            key={i}
+            key={k}
             style={{
               ...base,
-              top: r.top,
-              left: r.left,
-              width: r.width,
-              height: r.height,
-              outline: `1.5px solid ${COLOR.select}`,
-              background: "rgba(59,130,246,0.06)",
-              boxShadow: i === 0 ? `0 0 0 1px rgba(59,130,246,0.35)` : undefined,
+              top: y - 3.5,
+              left: x - 3.5,
+              width: 7,
+              height: 7,
+              background: "#fff",
+              border: `1.5px solid ${COLOR.select}`,
             }}
           />
+        );
+        return (
+          <div key={i} style={{ ...base, top: 0, left: 0, width: 0, height: 0 }}>
+            <div
+              style={{
+                ...base,
+                top: r.top,
+                left: r.left,
+                width: r.width,
+                height: r.height,
+                outline: `1.5px solid ${COLOR.select}`,
+                background: primary ? "transparent" : "rgba(59,130,246,0.05)",
+              }}
+            />
+            {primary && [
+              handle(r.left, r.top, "nw"),
+              handle(r.right, r.top, "ne"),
+              handle(r.left, r.bottom, "sw"),
+              handle(r.right, r.bottom, "se"),
+            ]}
+            {primary && (
+              <div
+                style={{
+                  ...base,
+                  top: r.bottom + 6,
+                  left: r.left + r.width / 2,
+                  transform: "translateX(-50%)",
+                  padding: "2px 7px",
+                  background: COLOR.select,
+                  color: "#fff",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {Math.round(r.width)} × {Math.round(r.height)}
+              </div>
+            )}
+          </div>
         );
       })}
       {primary && (
         <Chip
           x={primary.getBoundingClientRect().left}
           y={primary.getBoundingClientRect().top - 15}
-          text={
-            selection.length > 1
-              ? `${selection.length} selected`
-              : `${shortLabel(primary)}  ${Math.round(primary.getBoundingClientRect().width)}x${Math.round(
-                  primary.getBoundingClientRect().height,
-                )}`
-          }
+          text={selection.length > 1 ? `${selection.length} selected` : shortLabel(primary)}
           bg={COLOR.select}
         />
       )}

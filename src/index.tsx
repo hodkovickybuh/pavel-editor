@@ -63,6 +63,7 @@ import { Overlay } from "./Overlay";
 import { Panel, type MoveMode, type Tab } from "./Panel";
 import { Frame, type FrameSpec } from "./Frame";
 import { UI } from "./theme";
+import { EDITOR_CSS } from "./styles";
 
 type DragStart = { key: string; before: Change | undefined };
 
@@ -91,6 +92,17 @@ type Drag =
           can commit the WHOLE drag as one undo step */
       starts: DragStart[];
     }
+  | {
+      kind: "resize";
+      el: HTMLElement;
+      edge: "e" | "s" | "se";
+      startX: number;
+      startY: number;
+      baseW: number;
+      baseH: number;
+      starts: DragStart[];
+      moved: boolean;
+    }
   | { kind: "section"; el: HTMLElement; startY: number };
 
 /** the props cmd+C captures: the visual identity of an element, not its layout */
@@ -109,7 +121,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   const [on, setOn] = useState(false);
   const [mode, setMode] = useState<"spacing" | "sections">("spacing");
   const [tab, setTab] = useState<Tab>("design");
-  const [moveMode, setMoveMode] = useState<MoveMode>("push");
+  const [moveMode, setMoveMode] = useState<MoveMode>("isolate");
   const [selection, setSelectionState] = useState<HTMLElement[]>([]);
   const [hover, setHover] = useState<HTMLElement | null>(null);
   const [marquee, setMarquee] = useState<Box | null>(null);
@@ -160,6 +172,15 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   }, []);
 
   const bump = useCallback(() => setTick((t) => t + 1), []);
+
+  // the editor's own stylesheet, injected once and scoped to [data-editmode-ui]
+  useEffect(() => {
+    if (document.getElementById("pavel-editor-css")) return;
+    const tag = document.createElement("style");
+    tag.id = "pavel-editor-css";
+    tag.textContent = EDITOR_CSS;
+    document.head.appendChild(tag);
+  }, []);
 
   /* ------------------------------------------------------------------ arm */
 
@@ -381,6 +402,34 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         return;
       }
 
+      // RESIZE: grabbing within 7px of a selected element's right/bottom edge
+      // resizes it, the way every canvas tool works. Corner = both axes.
+      const prim = selRef.current[0];
+      if (prim && selRef.current.length === 1) {
+        const r = rectOf(prim);
+        const nearE = Math.abs(e.clientX - r.right) < 7 && e.clientY > r.top - 7 && e.clientY < r.bottom + 7;
+        const nearS = Math.abs(e.clientY - r.bottom) < 7 && e.clientX > r.left - 7 && e.clientX < r.right + 7;
+        if (nearE || nearS) {
+          const p = store.pathOf(prim);
+          drag.current = {
+            kind: "resize",
+            el: prim,
+            edge: nearE && nearS ? "se" : nearE ? "e" : "s",
+            startX: e.clientX,
+            startY: e.clientY,
+            baseW: r.width,
+            baseH: r.height,
+            starts: [
+              { key: `${p}|width`, before: store.changes.get(`${p}|width`) },
+              { key: `${p}|height`, before: store.changes.get(`${p}|height`) },
+            ],
+            moved: false,
+          };
+          edDoc().body.style.cursor = nearE && nearS ? "nwse-resize" : nearE ? "ew-resize" : "ns-resize";
+          return;
+        }
+      }
+
       if (el && selRef.current.includes(el)) {
         const els = selRef.current;
         const peers = el.parentElement
@@ -454,10 +503,29 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         return;
       }
 
+      if (d?.kind === "resize") {
+        if (!d.moved && Math.abs(e.clientX - d.startX) < 3 && Math.abs(e.clientY - d.startY) < 3) return;
+        d.moved = true;
+        if (d.edge !== "s") store.writeLive(d.el, "width", d.baseW + (e.clientX - d.startX));
+        if (d.edge !== "e") store.writeLive(d.el, "height", d.baseH + (e.clientY - d.startY));
+        const r = rectOf(d.el);
+        setNote(`${Math.round(r.width)} × ${Math.round(r.height)}`);
+        bump();
+        return;
+      }
+
       if (d?.kind === "section") return;
 
       const el = pick(e.clientX, e.clientY);
       setHover(el);
+      // resize affordance on the selection's edges
+      const prim = selRef.current[0];
+      if (prim && selRef.current.length === 1) {
+        const r = rectOf(prim);
+        const nearE = Math.abs(e.clientX - r.right) < 7 && e.clientY > r.top - 7 && e.clientY < r.bottom + 7;
+        const nearS = Math.abs(e.clientY - r.bottom) < 7 && e.clientX > r.left - 7 && e.clientX < r.right + 7;
+        edDoc().body.style.cursor = nearE && nearS ? "nwse-resize" : nearE ? "ew-resize" : nearS ? "ns-resize" : "";
+      }
       const sel = selRef.current[0];
       if (e.altKey && sel && el && el !== sel) setSpans(measure(rectOf(sel), rectOf(el)));
       else setSpans([]);
@@ -486,7 +554,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         return;
       }
 
-      if (d.kind === "move" && d.moved) {
+      if ((d.kind === "move" || d.kind === "resize") && d.moved) {
         store.commitDrag(d.starts);
         bump();
       }
@@ -496,7 +564,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     // leave a stale drag, a grabbing cursor or a half-transparent section
     const onCancel = () => {
       const d = drag.current;
-      if (d?.kind === "move" && d.moved) store.commitDrag(d.starts);
+      if ((d?.kind === "move" || d?.kind === "resize") && d.moved) store.commitDrag(d.starts);
       endDrag();
     };
 
@@ -767,24 +835,11 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     return (
       <button
         data-editmode-ui=""
+        className="pe-btn on"
         onClick={() => setOn(true)}
-        style={{
-          position: "fixed",
-          bottom: 14,
-          right: 14,
-          zIndex: 2147483000,
-          padding: "7px 12px",
-          cursor: "pointer",
-          background: UI.bg,
-          color: UI.mint,
-          border: `1px solid ${UI.border}`,
-          fontWeight: 700,
-          ...UI.mono,
-          fontSize: 10,
-          letterSpacing: "0.1em",
-        }}
+        style={{ position: "fixed", bottom: 14, right: 14, zIndex: 2147483000, height: 30, letterSpacing: "0.12em" }}
       >
-        EDIT
+        ✎ EDIT
       </button>
     );
   }

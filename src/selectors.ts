@@ -29,6 +29,8 @@ export const PROPS = {
   "row-gap": { css: "rowGap", unit: "px", step: 1, min: 0 },
   "column-gap": { css: "columnGap", unit: "px", step: 1, min: 0 },
   "max-width": { css: "maxWidth", unit: "px", step: 4, min: 0 },
+  width: { css: "width", unit: "px", step: 1, min: 4 },
+  height: { css: "height", unit: "px", step: 1, min: 4 },
   "font-size": { css: "fontSize", unit: "px", step: 1, min: 1 },
   "line-height": { css: "lineHeight", unit: "px", step: 1, min: 0 },
   "letter-spacing": { css: "letterSpacing", unit: "px", step: 0.1, min: -10 },
@@ -42,7 +44,7 @@ export type NumProp = keyof typeof PROPS;
 export const GROUPS: Array<{ title: string; props: NumProp[] }> = [
   { title: "spacing", props: ["margin-top", "margin-bottom", "margin-left", "margin-right"] },
   { title: "padding", props: ["padding-top", "padding-bottom", "padding-left", "padding-right"] },
-  { title: "layout", props: ["gap", "row-gap", "column-gap", "max-width"] },
+  { title: "layout", props: ["width", "height", "max-width", "gap", "row-gap", "column-gap"] },
   { title: "type", props: ["font-size", "line-height", "letter-spacing"] },
   { title: "appearance", props: ["border-radius", "opacity"] },
 ];
@@ -243,6 +245,8 @@ export function readProp(el: HTMLElement, prop: NumProp): number {
   if (prop === "line-height" && raw === "normal") return round(px(cs.fontSize) * 1.2, 1);
   if (prop === "letter-spacing" && raw === "normal") return 0;
   if (prop === "max-width" && (raw === "none" || !raw)) return round(el.getBoundingClientRect().width, 1);
+  if (prop === "width" && (raw === "auto" || !raw)) return round(el.getBoundingClientRect().width, 1);
+  if (prop === "height" && (raw === "auto" || !raw)) return round(el.getBoundingClientRect().height, 1);
   return round(px(raw), PROPS[prop].step);
 }
 
