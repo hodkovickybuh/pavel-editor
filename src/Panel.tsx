@@ -467,6 +467,8 @@ function KeysSheet() {
       <Row keys={<>2× click</>}>on text: edit the words · on a group: enter it</Row>
       <Row keys={<><K k="←" /> <K k="→" /></>}>select the parent / the child</Row>
       <Row keys={<K k="esc" />}>deselect</Row>
+      <Row keys={<><K k="⌘" />+click</>}>USE the page: follow a link, press a button</Row>
+      <Row keys={<>✕ then ✎ EDIT</>}>pause the editor entirely, come back later</Row>
 
       <H>MOVE & RESIZE</H>
       <Row keys={<>drag</>}>move the selected thing (solo: only it moves)</Row>
@@ -630,6 +632,7 @@ export function Panel({
   root,
   setHover,
   tick,
+  updateTo,
 }: {
   mode: "spacing" | "sections" | "mark";
   setMode: (m: "spacing" | "sections" | "mark") => void;
@@ -677,6 +680,7 @@ export function Panel({
   root: HTMLElement | null;
   setHover: (el: HTMLElement | null) => void;
   tick: number;
+  updateTo: string | null;
 }) {
   void tick; // re-render trigger; the panel reads the live DOM each pass
 
@@ -1083,6 +1087,16 @@ export function Panel({
               </div>
             )}
           </div>
+
+          {updateTo && (
+            <div className="pe-update">
+              <span>v{updateTo} is out</span>
+              <a href="https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip" target="_blank" rel="noreferrer">
+                ⬇ download
+              </a>
+              <span style={{ color: "var(--pe-dim)" }}>then re-drag the folder in chrome://extensions</span>
+            </div>
+          )}
 
           {/* footer */}
           <div style={{ display: "flex", gap: 6, padding: 10, borderTop: "1px solid var(--pe-border)", flex: "none" }}>

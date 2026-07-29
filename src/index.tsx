@@ -59,6 +59,7 @@ import {
   verticalGaps,
 } from "./geometry";
 import { store, type Change } from "./store";
+import { VERSION } from "./version";
 import { Overlay } from "./Overlay";
 import { Panel, type MoveMode, type Tab } from "./Panel";
 import { Frame, type FrameSpec } from "./Frame";
@@ -139,6 +140,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   const [showCentring, setShowCentring] = useState(true);
   const [scopeAll, setScopeAll] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
+  const [updateTo, setUpdateTo] = useState<string | null>(null);
   const [showingOriginal, setShowingOriginal] = useState(false);
   const [variantSaved, setVariantSaved] = useState<{ A: boolean; B: boolean }>({
     A: store.hasVariant("A"),
@@ -167,6 +169,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   const editingText = useRef<HTMLElement | null>(null);
   const styleClip = useRef<{ nums: Partial<Record<NumProp, number>>; strs: Record<string, string> } | null>(null);
   const toastTimer = useRef(0);
+  const linkHint = useRef(false);
   useEffect(() => {
     modeRef.current = mode;
   }, [mode]);
@@ -208,6 +211,26 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       setOn(true);
     }
   }, [standalone]);
+
+  // once per session, ask jsDelivr's data API for the newest release tag and
+  // offer the zip when this copy is older; sideloaded copies (friends with the
+  // zip) have no other update channel at all
+  useEffect(() => {
+    if (!on) return;
+    fetch("https://data.jsdelivr.com/v1/package/gh/hodkovickybuh/pavel-editor")
+      .then((r) => r.json())
+      .then((j: { versions?: string[] }) => {
+        const latest = j.versions?.[0];
+        if (!latest) return;
+        const num = (v: string) => v.split(".").map(Number);
+        const [a1, a2, a3] = num(latest);
+        const [b1, b2, b3] = num(VERSION);
+        if (a1 > b1 || (a1 === b1 && (a2 > b2 || (a2 === b2 && a3 > b3)))) setUpdateTo(latest);
+      })
+      .catch(() => {
+        /* offline or blocked: no banner */
+      });
+  }, [on]);
 
   // re-apply anything from before the last hot reload; the dev server rebuilds
   // on every save and would otherwise wipe a session of work. Re-applied on a
@@ -469,6 +492,9 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
 
     const onDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
+      // cmd+click is a NORMAL click: links follow, buttons fire, menus open.
+      // The page stays usable while editing, the pro-tool convention.
+      if (e.metaKey && !e.shiftKey && !e.altKey) return;
       if ((e.target as HTMLElement)?.closest?.("[data-editmode-ui]")) return;
       if (editingText.current) return; // let a text edit run to its own blur
       const el = pick(e.clientX, e.clientY);
@@ -897,8 +923,14 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       const t = ev.target as HTMLElement;
       if (t?.closest?.("[data-editmode-ui]")) return;
       if (editingText.current && editingText.current.contains(t)) return;
+      if ((ev as MouseEvent).metaKey) return; // cmd+click passes through
       ev.preventDefault();
       ev.stopPropagation();
+      // the first time a real link or button gets eaten, say how to use it
+      if (!linkHint.current && t?.closest?.("a, button")) {
+        linkHint.current = true;
+        flash("links are paused while editing · ⌘+click follows them · ✕ pauses the editor");
+      }
     };
 
     // IMAGE DROP: a file dragged onto an <img> previews the swap immediately
@@ -1225,6 +1257,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         root={root}
         setHover={setHover}
         tick={tick}
+        updateTo={updateTo}
       />
 
       {/* note input: a floating field, because prompt() would freeze the page */}

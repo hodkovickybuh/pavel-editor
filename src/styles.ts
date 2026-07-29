@@ -67,7 +67,10 @@ export const EDITOR_CSS = `
   -webkit-backdrop-filter: blur(24px) saturate(1.1);
   overflow: hidden;
 }
-.pe-scroll { overflow-y: auto; flex: 1; overscroll-behavior: contain; }
+/* min-height:0 is the whole fix for "the sheet is huge and does not scroll":
+   a flex child refuses to shrink below its content without it, so the panel
+   blew past its max-height and the overflow never engaged */
+.pe-scroll { overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
 .pe-scroll::-webkit-scrollbar { width: 10px; }
 .pe-scroll::-webkit-scrollbar-thumb { background: var(--pe-well-hi); border: 3px solid transparent; background-clip: content-box; border-radius: 5px; }
 
@@ -209,6 +212,14 @@ export const EDITOR_CSS = `
 .pe-cta:hover { filter: brightness(1.06); }
 .pe-cta:active { transform: scale(0.985); }
 .pe-cta.done { background: var(--pe-text); box-shadow: none; }
+
+.pe-update {
+  display: flex; align-items: center; gap: 8px;
+  margin: 8px 10px 0; padding: 7px 10px;
+  background: var(--pe-blue-dim); border: 1px solid var(--pe-blue);
+  border-radius: 8px; font-size: 10.5px; color: var(--pe-blue);
+}
+.pe-update a { color: inherit; font-weight: 700; }
 
 .pe-layer {
   display: flex; align-items: center; gap: 4px; height: 24px; cursor: pointer;
