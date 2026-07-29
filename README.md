@@ -61,6 +61,10 @@ var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkov
 | **Notes** | N pins design intent to an element; notes export with the report |
 | **Style clipboard** | ⌘C / ⌘V copies the look of one element onto another |
 | **Device frame** | a real viewport emulator (iPhone/iPad/laptop presets, custom, rotate); phone CSS actually runs, and phone-made edits are tagged for the right media query |
+| **Box model** | the DevTools diagram, but editable: click any margin/padding/size number in place |
+| **Before / after** | one button flips the whole page between the original and your edits |
+| **A/B variants** | save two directions, click between them, ship the winner |
+| **Image swap** | drop a file onto any image; the report names the file for whoever places the asset |
 | **Sections** | Tab, then drag whole page sections to reorder |
 | **History** | ⌘Z across everything, one step per gesture, survives reloads and hot reloads |
 

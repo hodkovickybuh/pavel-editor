@@ -40,6 +40,146 @@ export type MoveMode = "push" | "isolate";
 
 /* ------------------------------------------------------------- primitives */
 
+/** one editable number inside the box-model diagram: click to type, esc cancels */
+function BoxVal({
+  value,
+  changed,
+  onSet,
+  title,
+}: {
+  value: number;
+  changed: boolean;
+  onSet: (v: number) => void;
+  title: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  if (draft !== null) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        title={title}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          if (draft !== "" && Number.isFinite(Number(draft))) onSet(Number(draft));
+          setDraft(null);
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") setDraft(null);
+        }}
+        style={{
+          width: 34,
+          height: 16,
+          padding: 0,
+          textAlign: "center",
+          background: "rgba(10,8,14,0.5)",
+          border: "1px solid var(--pe-blue)",
+          borderRadius: 4,
+          color: "var(--pe-text)",
+          font: "inherit",
+          fontSize: 10,
+          fontFamily: "var(--pe-mono)",
+        }}
+      />
+    );
+  }
+  return (
+    <button
+      title={`${title} · click to edit`}
+      onClick={() => setDraft(String(value))}
+      style={{
+        minWidth: 22,
+        padding: "0 3px",
+        height: 16,
+        border: "none",
+        borderRadius: 4,
+        cursor: "text",
+        background: "transparent",
+        color: changed ? "var(--pe-mint)" : "inherit",
+        font: "inherit",
+        fontSize: 10,
+        fontFamily: "var(--pe-mono)",
+        fontWeight: changed ? 700 : 500,
+      }}
+    >
+      {value}
+    </button>
+  );
+}
+
+/**
+ * The DevTools-style box model: margin, border, padding and the content box as
+ * nested rectangles with every value editable in place. Replaces eight rows of
+ * inputs with the picture everyone already knows how to read.
+ */
+function BoxModel({
+  el,
+  changedKeys,
+  path,
+  onSet,
+}: {
+  el: HTMLElement;
+  changedKeys: Set<string>;
+  path: string | null;
+  onSet: (prop: NumProp, v: number) => void;
+}) {
+  const v = (p: NumProp) => readProp(el, p);
+  const chg = (p: string) => !!path && changedKeys.has(`${path}|${p}`);
+  const cs = csOf(el);
+  const bw = Math.round(parseFloat(cs.borderTopWidth) || 0);
+  const r = el.getBoundingClientRect();
+
+  const ring = (bg: string, border: string, label: string, top: React.ReactNode, right: React.ReactNode, bottom: React.ReactNode, left: React.ReactNode, child: React.ReactNode) => (
+    <div style={{ background: bg, border, borderRadius: 6, padding: "2px 4px", display: "grid", gridTemplateColumns: "auto 1fr auto", gridTemplateRows: "auto 1fr auto", alignItems: "center", justifyItems: "center", gap: 1, position: "relative" }}>
+      <span style={{ position: "absolute", top: 2, left: 6, fontSize: 9, color: "rgba(240,239,244,0.75)" }}>{label}</span>
+      <span style={{ gridColumn: "1 / 4" }}>{top}</span>
+      <span>{left}</span>
+      <span style={{ width: "100%" }}>{child}</span>
+      <span>{right}</span>
+      <span style={{ gridColumn: "1 / 4" }}>{bottom}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--pe-border)", fontFamily: "var(--pe-mono)", fontSize: 10, color: "var(--pe-text)" }}>
+      {ring(
+        "rgba(200,155,107,0.20)",
+        "1px dashed rgba(200,155,107,0.6)",
+        "margin",
+        <BoxVal title="margin-top" value={v("margin-top")} changed={chg("margin-top")} onSet={(x) => onSet("margin-top", x)} />,
+        <BoxVal title="margin-right" value={v("margin-right")} changed={chg("margin-right")} onSet={(x) => onSet("margin-right", x)} />,
+        <BoxVal title="margin-bottom" value={v("margin-bottom")} changed={chg("margin-bottom")} onSet={(x) => onSet("margin-bottom", x)} />,
+        <BoxVal title="margin-left" value={v("margin-left")} changed={chg("margin-left")} onSet={(x) => onSet("margin-left", x)} />,
+        ring(
+          "rgba(240,239,244,0.06)",
+          "1px solid rgba(240,239,244,0.35)",
+          "border",
+          <span style={{ color: "var(--pe-faint)" }}>{bw}</span>,
+          <span style={{ color: "var(--pe-faint)" }}>{bw}</span>,
+          <span style={{ color: "var(--pe-faint)" }}>{bw}</span>,
+          <span style={{ color: "var(--pe-faint)" }}>{bw}</span>,
+          ring(
+            "rgba(153,225,217,0.16)",
+            "1px dashed rgba(153,225,217,0.55)",
+            "padding",
+            <BoxVal title="padding-top" value={v("padding-top")} changed={chg("padding-top")} onSet={(x) => onSet("padding-top", x)} />,
+            <BoxVal title="padding-right" value={v("padding-right")} changed={chg("padding-right")} onSet={(x) => onSet("padding-right", x)} />,
+            <BoxVal title="padding-bottom" value={v("padding-bottom")} changed={chg("padding-bottom")} onSet={(x) => onSet("padding-bottom", x)} />,
+            <BoxVal title="padding-left" value={v("padding-left")} changed={chg("padding-left")} onSet={(x) => onSet("padding-left", x)} />,
+            <div style={{ background: "rgba(178,213,229,0.22)", border: "1px solid rgba(178,213,229,0.6)", borderRadius: 5, padding: "3px 6px", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, minHeight: 24 }}>
+              <BoxVal title="width" value={Math.round(r.width)} changed={chg("width")} onSet={(x) => onSet("width", x)} />
+              ×
+              <BoxVal title="height" value={Math.round(r.height)} changed={chg("height")} onSet={(x) => onSet("height", x)} />
+            </div>,
+          ),
+        ),
+      )}
+    </div>
+  );
+}
+
 function GroupHead({
   title,
   open,
@@ -379,6 +519,11 @@ export function Panel({
   onDelete,
   onNote,
   onOff,
+  showingOriginal,
+  onToggleOriginal,
+  variantSaved,
+  activeVariant,
+  onVariant,
   frameSpec,
   onOpenFrame,
   onCloseFrame,
@@ -418,6 +563,11 @@ export function Panel({
   onDelete: () => void;
   onNote: () => void;
   onOff: () => void;
+  showingOriginal: boolean;
+  onToggleOriginal: () => void;
+  variantSaved: { A: boolean; B: boolean };
+  activeVariant: "A" | "B" | null;
+  onVariant: (slot: "A" | "B", save: boolean) => void;
   frameSpec: FrameSpec | null;
   onOpenFrame: () => void;
   onCloseFrame: () => void;
@@ -563,17 +713,47 @@ export function Panel({
             </div>
           </div>
 
-          {/* view toggles */}
-          <div style={{ display: "flex", gap: 6, padding: "10px 14px", borderBottom: "1px solid var(--pe-border)", flex: "none" }}>
-            <button className={`pe-btn${showSpacing ? " on" : ""}`} onClick={() => setShowSpacing(!showSpacing)} title="S · show margin (orange) and padding (green) bands">
+          {/* view toggles + compare */}
+          <div style={{ display: "flex", gap: 6, padding: "10px 14px", borderBottom: "1px solid var(--pe-border)", flex: "none", alignItems: "center" }}>
+            <button className={`pe-btn${showSpacing ? " on" : ""}`} onClick={() => setShowSpacing(!showSpacing)} title="S · show margin and padding bands">
               spacing
             </button>
-            <button className={`pe-btn${showCentring ? " on" : ""}`} onClick={() => setShowCentring(!showCentring)} title="C · shows whether the selection is centred, and by how much it is off">
+            <button className={`pe-btn${showCentring ? " on" : ""}`} onClick={() => setShowCentring(!showCentring)} title="C · centring readout">
               centring
             </button>
-            <button className={`pe-btn${showGrid ? " on" : ""}`} onClick={() => setShowGrid(!showGrid)} title="G · an 8px baseline grid">
+            <button className={`pe-btn${showGrid ? " on" : ""}`} onClick={() => setShowGrid(!showGrid)} title="G · 8px grid">
               grid
             </button>
+            <span style={{ flex: 1 }} />
+            <button className={`pe-btn${showingOriginal ? " on" : ""}`} onClick={onToggleOriginal} title="flip the whole page between BEFORE (original) and AFTER (your edits)">
+              {showingOriginal ? "original ◉" : "before/after"}
+            </button>
+          </div>
+
+          {/* variants */}
+          <div style={{ display: "flex", gap: 6, padding: "8px 14px", borderBottom: "1px solid var(--pe-border)", flex: "none", alignItems: "center" }}>
+            <span style={{ color: "var(--pe-faint)", fontSize: 10.5 }}>variants</span>
+            <div className="pe-seg">
+              {(["A", "B"] as const).map((slot) => (
+                <button
+                  key={slot}
+                  className={activeVariant === slot ? "on" : ""}
+                  onClick={() => onVariant(slot, false)}
+                  title={variantSaved[slot] ? `load variant ${slot} · alt+click overwrites it with the current state` : `save the current state as variant ${slot}`}
+                  onAuxClick={() => onVariant(slot, true)}
+                  onClickCapture={(e) => {
+                    if (e.altKey) {
+                      e.stopPropagation();
+                      onVariant(slot, true);
+                    }
+                  }}
+                >
+                  {slot}
+                  {variantSaved[slot] ? "" : " +"}
+                </button>
+              ))}
+            </div>
+            <span style={{ color: "var(--pe-faint)", fontSize: 10 }}>save two directions, click to compare</span>
           </div>
 
           {/* tabs */}
@@ -672,8 +852,11 @@ export function Panel({
                   </div>
                 )}
 
+                {/* the box model replaces the spacing and padding row-groups */}
+                <BoxModel el={primary} changedKeys={changedKeys} path={primaryPath} onSet={onSet} />
+
                 {/* numeric groups */}
-                {GROUPS.map((g) => {
+                {GROUPS.filter((g) => g.title !== "spacing" && g.title !== "padding").map((g) => {
                   const cs = csOf(primary);
                   const isFlex = cs.display.includes("flex") || cs.display.includes("grid");
                   const props = g.props.filter((p) => !p.includes("gap") || isFlex);

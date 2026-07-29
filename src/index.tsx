@@ -133,6 +133,12 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   const [showGrid, setShowGrid] = useState(false);
   const [showCentring, setShowCentring] = useState(true);
   const [scopeAll, setScopeAll] = useState(false);
+  const [showingOriginal, setShowingOriginal] = useState(false);
+  const [variantSaved, setVariantSaved] = useState<{ A: boolean; B: boolean }>({
+    A: store.hasVariant("A"),
+    B: store.hasVariant("B"),
+  });
+  const [activeVariant, setActiveVariant] = useState<"A" | "B" | null>(null);
   const [noteDraft, setNoteDraft] = useState<{ el: HTMLElement; text: string } | null>(null);
   /** the device frame, and the realm handle once its document is ready */
   const [frameSpec, setFrameSpec] = useState<FrameSpec | null>(null);
@@ -697,6 +703,30 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       ev.stopPropagation();
     };
 
+    // IMAGE DROP: a file dragged onto an <img> previews the swap immediately
+    const onDragOver = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.includes("Files")) return;
+      const t = edDoc().elementFromPoint(e.clientX, e.clientY);
+      if (t && (t as HTMLElement).closest && !(t as HTMLElement).closest("[data-editmode-ui]")) e.preventDefault();
+    };
+    const onDrop = (e: DragEvent) => {
+      const file = e.dataTransfer?.files?.[0];
+      if (!file || !file.type.startsWith("image/")) return;
+      const t = edDoc().elementFromPoint(e.clientX, e.clientY);
+      const img = t && (t as HTMLElement).closest ? ((t as HTMLElement).closest("img") as HTMLImageElement | null) : null;
+      if (!img) {
+        flash("drop it ON an image to swap that image");
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      store.setImage(img, file);
+      setSelection([img]);
+      flash(`image swapped with ${file.name} · the report will name the file`);
+      bump();
+    };
+
     // bound on the TARGET realm (the iframe when the device frame is open);
     // keyboard also on the parent so shortcuts work while the panel has focus
     const w = edWin();
@@ -707,6 +737,8 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     w.addEventListener("keydown", onKey, true);
     w.addEventListener("click", swallow, true);
     w.addEventListener("dblclick", onDouble, true);
+    w.addEventListener("dragover", onDragOver, true);
+    w.addEventListener("drop", onDrop, true);
     const alsoParent = w !== window;
     if (alsoParent) window.addEventListener("keydown", onKey, true);
     return () => {
@@ -717,6 +749,8 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       w.removeEventListener("keydown", onKey, true);
       w.removeEventListener("click", swallow, true);
       w.removeEventListener("dblclick", onDouble, true);
+      w.removeEventListener("dragover", onDragOver, true);
+      w.removeEventListener("drop", onDrop, true);
       if (alsoParent) window.removeEventListener("keydown", onKey, true);
       try {
         edDoc().body.style.cursor = "";
@@ -787,6 +821,37 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     );
     console.log(text);
   }, [flash, changes.length]);
+
+  const toggleOriginal = useCallback(() => {
+    const off = store.toggleOriginal();
+    setShowingOriginal(off);
+    flash(off ? "showing the ORIGINAL page · click again for your edits" : "showing your edits");
+    bump();
+  }, [flash, bump]);
+
+  /**
+   * A/B: first click on an empty slot SAVES the current state; a click on a
+   * saved slot LOADS it; alt+click overwrites. Editing after a load makes the
+   * page diverge from the slot until it is saved again.
+   */
+  const variant = useCallback(
+    (slot: "A" | "B", save: boolean) => {
+      if (save || !store.hasVariant(slot)) {
+        store.saveVariant(slot);
+        setVariantSaved({ A: store.hasVariant("A"), B: store.hasVariant("B") });
+        setActiveVariant(slot);
+        flash(`current state saved as variant ${slot}`);
+        return;
+      }
+      if (store.loadVariant(slot)) {
+        setActiveVariant(slot);
+        setShowingOriginal(false);
+        flash(`variant ${slot} loaded`);
+        bump();
+      }
+    },
+    [flash, bump],
+  );
 
   /* --------------------------------------------------------- device frame */
 
@@ -934,6 +999,11 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
           setHover(null);
           closeFrame();
         }}
+        showingOriginal={showingOriginal}
+        onToggleOriginal={toggleOriginal}
+        variantSaved={variantSaved}
+        activeVariant={activeVariant}
+        onVariant={variant}
         frameSpec={frameSpec}
         onOpenFrame={() => openFrame({ w: 390, h: 844, label: "iPhone 14" })}
         onCloseFrame={closeFrame}

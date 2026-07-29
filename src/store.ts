@@ -107,8 +107,116 @@ class EditStore {
   /** the persistence key for an element, exposed so a drag can snapshot entries */
   pathOf = (el: HTMLElement) => domPath(el);
 
+  /** true while the page is showing ORIGINALS with all edits suspended */
+  previewOff = false;
+  /** runtime-only object URLs for dropped images, keyed like changes */
+  private imgUrls = new Map<string, string>();
+
   canUndo = () => this.undoStack.length > 0;
   canRedo = () => this.redoStack.length > 0;
+
+  /**
+   * BEFORE / AFTER: flip the whole page between the edited state and the
+   * originals. Styles fall back to "" (the stylesheet), text and images to the
+   * recorded base. Any write while showing originals flips back first, so an
+   * edit is never silently layered on the wrong state.
+   */
+  toggleOriginal() {
+    this.previewOff = !this.previewOff;
+    for (const c of this.changes.values()) {
+      if (c.prop === "order" || c.prop === "note") continue;
+      const el = resolveTarget(c);
+      if (!el) continue;
+      if (c.prop === "text") el.textContent = this.previewOff ? c.base : c.value;
+      else if (c.prop === "image") {
+        const url = this.imgUrls.get(c.key);
+        (el as HTMLImageElement).src = this.previewOff ? c.base : (url ?? c.base);
+      } else el.style.setProperty(String(c.prop), this.previewOff ? "" : c.value);
+    }
+    this.dirty = true;
+    this.listeners.forEach((fn) => fn());
+    return this.previewOff;
+  }
+
+  private ensureLive() {
+    if (this.previewOff) this.toggleOriginal();
+  }
+
+  /**
+   * A/B VARIANTS: stash the whole change-set under a letter, restore it later.
+   * Loading clears the undo history (the swap is a state change, not an edit).
+   * Dropped-image swaps are session-runtime and do not travel between variants.
+   */
+  saveVariant(slot: "A" | "B") {
+    try {
+      sessionStorage.setItem(`pe-variant-${slot}`, JSON.stringify([...this.changes.values()].filter((c) => c.prop !== "image")));
+    } catch {
+      /* storage full/blocked: the toast will still say saved, acceptable for a preview tool */
+    }
+  }
+
+  hasVariant(slot: "A" | "B") {
+    try {
+      return sessionStorage.getItem(`pe-variant-${slot}`) !== null;
+    } catch {
+      return false;
+    }
+  }
+
+  loadVariant(slot: "A" | "B") {
+    let saved: Change[];
+    try {
+      const raw = sessionStorage.getItem(`pe-variant-${slot}`);
+      if (!raw) return false;
+      saved = JSON.parse(raw);
+    } catch {
+      return false;
+    }
+    this.ensureLive();
+    // clear the current state back to originals, then replay the variant
+    for (const c of this.changes.values()) {
+      const el = resolveTarget(c);
+      if (!el || c.prop === "order" || c.prop === "note") continue;
+      if (c.prop === "text") el.textContent = c.base;
+      else if (c.prop !== "image") el.style.setProperty(String(c.prop), "");
+    }
+    this.changes.clear();
+    for (const c of saved) {
+      const el = resolveTarget(c);
+      if (el) {
+        if (c.prop === "text") el.textContent = c.value;
+        else if (c.prop !== "note" && c.prop !== "order") el.style.setProperty(String(c.prop), c.value);
+      }
+      this.changes.set(c.key, c);
+    }
+    this.undoStack.length = 0;
+    this.redoStack.length = 0;
+    this.emit();
+    return true;
+  }
+
+  /**
+   * IMAGE SWAP: a dropped file previews via an object URL and lands in the
+   * report as an instruction naming the file, because the editor cannot upload
+   * anything anywhere; the human applying the report places the real asset.
+   */
+  setImage(el: HTMLImageElement, file: File) {
+    this.ensureLive();
+    const path = domPath(el);
+    const key = `${path}|image`;
+    const before = this.changes.get(key);
+    const base = before ? before.base : el.currentSrc || el.src;
+    const url = URL.createObjectURL(file);
+    const old = this.imgUrls.get(key);
+    if (old) URL.revokeObjectURL(old);
+    this.imgUrls.set(key, url);
+    el.srcset = "";
+    el.src = url;
+    const d = describe(el);
+    const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop: "image", base, value: `replace with dropped file "${file.name}"`, vw: edWin().innerWidth, ...runtimeRef(el) };
+    this.changes.set(key, next);
+    this.commit([{ key, before, after: next }]);
+  }
 
   /* ------------------------------------------------------------------ write */
 
@@ -118,6 +226,7 @@ class EditStore {
    * like one action rather than five.
    */
   set(el: HTMLElement, prop: NumProp, value: number, batch?: Snapshot[], opts?: { comp?: boolean }) {
+    this.ensureLive();
     const spec = PROPS[prop];
     const max = "max" in spec ? (spec.max as number) : Infinity;
     const v = Math.min(max, Math.max(spec.min, round(value, spec.step)));
@@ -164,6 +273,7 @@ class EditStore {
    * history and one report.
    */
   setStyle(el: HTMLElement, prop: string, value: string, batch?: Snapshot[]) {
+    this.ensureLive();
     const css = cssKeyOf(prop);
     if (!css) return;
     const path = domPath(el);
@@ -245,6 +355,7 @@ class EditStore {
    * becomes the single undo step for the whole gesture.
    */
   writeLive(el: HTMLElement, prop: NumProp, value: number) {
+    this.ensureLive();
     const spec = PROPS[prop];
     const max = "max" in spec ? (spec.max as number) : Infinity;
     const v = Math.min(max, Math.max(spec.min, round(value, spec.step)));
@@ -309,6 +420,12 @@ class EditStore {
       el.textContent = c ? c.value : (original ?? el.textContent ?? "");
       return;
     }
+    if (prop === "image") {
+      const base = snap.before?.base ?? snap.after?.base;
+      const url = this.imgUrls.get(key);
+      (el as HTMLImageElement).src = c ? (url ?? c.base) : (base ?? (el as HTMLImageElement).src);
+      return;
+    }
     if (!cssKeyOf(prop)) return;
     el.style.setProperty(prop, c ? c.value : "");
   }
@@ -355,7 +472,7 @@ class EditStore {
 
   private save() {
     try {
-      const payload = [...this.changes.values()].filter((c) => c.prop !== "order");
+      const payload = [...this.changes.values()].filter((c) => c.prop !== "order" && c.prop !== "image");
       if (payload.length) sessionStorage.setItem(STORAGE + location.pathname, JSON.stringify(payload));
       else sessionStorage.removeItem(STORAGE + location.pathname);
     } catch {
@@ -406,7 +523,8 @@ class EditStore {
   /** the report pasted back into Claude: file, rule, property, old and new */
   report() {
     const all = this.getSnapshot();
-    const spacing = all.filter((c) => c.prop !== "text" && c.prop !== "order" && c.prop !== "note");
+    const spacing = all.filter((c) => c.prop !== "text" && c.prop !== "order" && c.prop !== "note" && c.prop !== "image");
+    const images = all.filter((c) => c.prop === "image");
     const text = all.filter((c) => c.prop === "text");
     const notes = all.filter((c) => c.prop === "note");
     const order = all.find((c) => c.prop === "order");
@@ -469,6 +587,12 @@ class EditStore {
       lines.push("");
     }
 
+    if (images.length) {
+      lines.push("IMAGE SWAPS (the dropped files live on the designer's machine; get them and place the assets)");
+      for (const c of images) lines.push(`  ${c.label}: ${c.value}   /* was ${c.base} */`);
+      lines.push("");
+    }
+
     if (notes.length) {
       lines.push("NOTES (design intent, no CSS attached; act on these too)");
       for (const c of notes) lines.push(`  ${c.label}: ${c.value}`);
@@ -481,7 +605,7 @@ class EditStore {
       lines.push("");
     }
 
-    if (!spacing.length && !text.length && !notes.length && !order) lines.push("(nothing changed yet)");
+    if (!spacing.length && !text.length && !notes.length && !images.length && !order) lines.push("(nothing changed yet)");
     return lines.join("\n");
   }
 }
