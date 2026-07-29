@@ -7,6 +7,8 @@
 Click things. Drag them. Restyle them. Preview on any device. Pin notes.
 Then press one button and hand the whole session to your AI assistant as a report it applies to your real stylesheets.
 
+### ▶ [Try it right now, in your browser, one click](https://hodkovickybuh.github.io/pavel-editor/demo/)
+
 *No build step · no framework requirement · no server · one script*
 
 ![PAVEL EDITOR](assets/editor.png)
@@ -25,21 +27,22 @@ Then press one button and hand the whole session to your AI assistant as a repor
 
 ![the extension editing github.com itself](assets/extension-on-github.png)
 
-**Script tag**, for a site you own:
+**Script tag**, for a site you own (pin a release tag, `@main` caches for hours):
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.3.0/dist/pavel-editor.js"></script>
 ```
 
-**Console one-liner**, for a page you own that is already running:
+<details>
+<summary><b>Console one-liner</b> · ⚠ read this first: it only works on pages YOU own</summary>
+
+Sites you do not control (github.com, banks, most big products) send a Content-Security-Policy that blocks ALL outside scripts. Pasting this there produces a "violates the following Content Security Policy" error every time; that is the site refusing, not the editor breaking. **It cannot be tested on github.com.** To just try the editor, use the [live demo](https://hodkovickybuh.github.io/pavel-editor/demo/) or the extension. On your own localhost or site, paste away:
 
 ```js
-var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js';document.body.appendChild(s);
+var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.3.0/dist/pavel-editor.js';document.body.appendChild(s);
 ```
 
-> ⚠ The script tag and the console line only work on YOUR OWN pages (localhost, your deployed site). Sites you do not control usually send a Content-Security-Policy that blocks all outside scripts; if you see a "violates the following Content Security Policy" error, that is the page refusing, not the editor breaking. The extension is immune to this. Do not paste the console line on github.com and expect it to run.
-
-**Try it right now**: clone and open `demo/index.html`.
+</details>
 
 > New to this? Read **[the Guide](GUIDE.md)**, written for designers who never touch code.
 

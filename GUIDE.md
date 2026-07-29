@@ -8,6 +8,8 @@ PAVEL EDITOR lets you redesign a real, live website the way you would move thing
 
 ## Opening it
 
+**Just want to see it?** Open the [live demo](https://hodkovickybuh.github.io/pavel-editor/demo/), no install, one click, the editor is already running there.
+
 **Easiest, works everywhere: the Chrome extension.**
 1. Download `pavel-editor-extension.zip` from the repository's **Releases** page and unzip it.
 2. In Chrome, open `chrome://extensions`, switch on **Developer mode** (top right).
