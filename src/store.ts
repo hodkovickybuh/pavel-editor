@@ -26,6 +26,13 @@ import { edWin, isElem } from "./context";
 
 export type ChangeProp = NumProp | string;
 
+/** which breakpoint bucket an edit belongs to: made at <=900px, it is a phone/
+    tablet decision and must never touch desktop, and vice versa */
+export type Bucket = "d" | "m";
+export const bucketOf = (): Bucket => (edWin().innerWidth <= 900 ? "m" : "d");
+export const changeKey = (path: string, prop: string, bucket?: Bucket) =>
+  bucket ? `${path}|${prop}|${bucket}` : `${path}|${prop}`;
+
 /** where to write a property, whichever of the two tables declares it */
 function cssKeyOf(prop: string): string | null {
   if (prop in PROPS) return PROPS[prop as NumProp].css;
@@ -58,6 +65,8 @@ export type Change = {
   /** innerHTML snapshots for text edits, so styled fragments survive undo/restore */
   baseHtml?: string;
   valueHtml?: string;
+  /** breakpoint bucket for style props; content changes (text/image/note) have none */
+  bucket?: Bucket;
 };
 
 /**
@@ -94,6 +103,9 @@ const STORAGE = "pavel-editor-v1";
 
 class EditStore {
   changes = new Map<string, Change>();
+  /** stable per-element ids for the preview stylesheet's selectors */
+  private pathIds = new Map<string, number>();
+  private nextId = 1;
   private undoStack: Snapshot[][] = [];
   private redoStack: Snapshot[][] = [];
   private listeners = new Set<() => void>();
@@ -128,6 +140,50 @@ class EditStore {
   /** runtime-only object URLs for dropped images, keyed like changes */
   private imgUrls = new Map<string, string>();
 
+  /**
+   * THE PREVIEW ENGINE. Style edits do not touch el.style any more: they are
+   * compiled into one injected stylesheet where every rule sits behind the
+   * media query of the bucket it was made in. That is what makes editing
+   * truthful across viewports: a margin chosen on desktop exists only above
+   * 900px, the phone keeps its own values, both can be edited independently,
+   * and a reset leaves the page byte-identical because there is nothing inline
+   * to forget. Rules use !important so they outrank the page's own cascade;
+   * scrub previews use inline-important, which outranks even that, then unwind.
+   */
+  syncSheet() {
+    const doc = edWin().document;
+    const buckets: Record<Bucket, Map<number, string[]>> = { d: new Map(), m: new Map() };
+    for (const c of this.changes.values()) {
+      if (!c.bucket) continue;
+      if (c.prop === "text" || c.prop === "note" || c.prop === "image" || c.prop === "order") continue;
+      const el = resolveTarget(c);
+      if (!el) continue;
+      let id = this.pathIds.get(c.path);
+      if (!id) {
+        id = this.nextId++;
+        this.pathIds.set(c.path, id);
+      }
+      if (el.getAttribute("data-pe-id") !== String(id)) el.setAttribute("data-pe-id", String(id));
+      const list = buckets[c.bucket].get(id) ?? [];
+      list.push(`${c.prop}: ${c.value} !important;`);
+      buckets[c.bucket].set(id, list);
+    }
+    const block = (m: Map<number, string[]>) =>
+      [...m.entries()].map(([id, decls]) => `[data-pe-id="${id}"] { ${decls.join(" ")} }`).join("\n");
+    const css = [
+      buckets.d.size ? `@media (min-width: 901px) {\n${block(buckets.d)}\n}` : "",
+      buckets.m.size ? `@media (max-width: 900px) {\n${block(buckets.m)}\n}` : "",
+    ].join("\n");
+    let tag = doc.getElementById("pavel-editor-preview") as HTMLStyleElement | null;
+    if (!tag) {
+      tag = doc.createElement("style");
+      tag.id = "pavel-editor-preview";
+      doc.head.appendChild(tag);
+    }
+    if (tag.textContent !== css) tag.textContent = css;
+    tag.media = this.previewOff ? "not all" : "all";
+  }
+
   canUndo = () => this.undoStack.length > 0;
   canRedo = () => this.redoStack.length > 0;
 
@@ -140,21 +196,22 @@ class EditStore {
   toggleOriginal() {
     this.previewOff = !this.previewOff;
     for (const c of this.changes.values()) {
-      if (c.prop === "order" || c.prop === "note") continue;
-      const el = resolveTarget(c);
-      if (!el) continue;
       if (c.prop === "text") {
+        const el = resolveTarget(c);
+        if (!el) continue;
         if (this.previewOff) {
           if (c.baseHtml != null) el.innerHTML = c.baseHtml;
           else el.textContent = c.base;
         } else if (c.valueHtml != null) el.innerHTML = c.valueHtml;
         else el.textContent = c.value;
-      }
-      else if (c.prop === "image") {
+      } else if (c.prop === "image") {
+        const el = resolveTarget(c);
+        if (!el) continue;
         const url = this.imgUrls.get(c.key);
         (el as HTMLImageElement).src = this.previewOff ? c.base : (url ?? c.base);
-      } else el.style.setProperty(String(c.prop), this.previewOff ? "" : c.value);
+      }
     }
+    this.syncSheet(); // styles flip wholesale via the sheet's media attribute
     this.dirty = true;
     this.listeners.forEach((fn) => fn());
     return this.previewOff;
@@ -196,26 +253,26 @@ class EditStore {
     }
     this.ensureLive();
     const prev = new Map(this.changes);
-    // clear the current state back to originals, then replay the variant
+    // text back to originals; styles are wholesale-recompiled by the sheet
     for (const c of this.changes.values()) {
+      if (c.prop !== "text") continue;
       const el = resolveTarget(c);
-      if (!el || c.prop === "order" || c.prop === "note") continue;
-      if (c.prop === "text") {
-        if (c.baseHtml != null) el.innerHTML = c.baseHtml;
-        else el.textContent = c.base;
-      } else if (c.prop !== "image") el.style.setProperty(String(c.prop), "");
+      if (!el) continue;
+      if (c.baseHtml != null) el.innerHTML = c.baseHtml;
+      else el.textContent = c.base;
     }
     this.changes.clear();
     for (const c of saved) {
-      const el = resolveTarget(c);
-      if (el) {
-        if (c.prop === "text") {
+      if (c.prop === "text") {
+        const el = resolveTarget(c);
+        if (el) {
           if (c.valueHtml != null) el.innerHTML = c.valueHtml;
           else el.textContent = c.value;
-        } else if (c.prop !== "note" && c.prop !== "order") el.style.setProperty(String(c.prop), c.value);
+        }
       }
       this.changes.set(c.key, c);
     }
+    this.syncSheet();
     // the swap is ONE undo step over the union of both states, so cmd+Z after
     // loading a variant returns exactly to where the page stood before it
     const keys = new Set([...prev.keys(), ...this.changes.keys()]);
@@ -262,7 +319,8 @@ class EditStore {
     const max = "max" in spec ? (spec.max as number) : Infinity;
     const v = Math.min(max, Math.max(spec.min, round(value, spec.step)));
     const path = domPath(el);
-    const key = `${path}|${prop}`;
+    const bucket = bucketOf();
+    const key = changeKey(path, prop, bucket);
     const before = this.changes.get(key);
     const base = before ? before.base : `${readProp(el, prop)}${spec.unit}`;
 
@@ -277,20 +335,16 @@ class EditStore {
       base,
       value: `${v}${spec.unit}`,
       vw: edWin().innerWidth,
+      bucket,
       comp: opts?.comp,
       ...runtimeRef(el),
     };
 
-    // Written through setProperty with the kebab name, which both property
-    // tables use as their keys. When the value lands back ON its base, the
-    // inline style is CLEARED rather than written: leaving `margin-top: 24px`
-    // inline when 24px is also the stylesheet value looks harmless here but
-    // overrides that element's media queries at every other viewport, with no
-    // change entry left to ever remove it.
-    el.style.setProperty(prop, next.value === base ? "" : next.value);
-
+    // no inline write: the preview stylesheet is the only carrier, scoped to
+    // this bucket's media query, so no other viewport ever sees the value
     if (next.value === base) this.changes.delete(key);
     else this.changes.set(key, next);
+    this.syncSheet();
 
     const snap: Snapshot = { key, before, after: this.changes.get(key) };
     if (batch) batch.push(snap);
@@ -308,7 +362,8 @@ class EditStore {
     const css = cssKeyOf(prop);
     if (!css) return;
     const path = domPath(el);
-    const key = `${path}|${prop}`;
+    const bucket = bucketOf();
+    const key = changeKey(path, prop, bucket);
     const before = this.changes.get(key);
     // numeric PROPS can also arrive here carrying a raw unit ("10vw"); their
     // base must come off the computed style, which readStyle does not cover
@@ -318,12 +373,11 @@ class EditStore {
         ? readStyle(el, prop)
         : `${readProp(el, prop as NumProp)}${PROPS[prop as NumProp]?.unit ?? ""}`;
     const d = describeFor(el, prop);
-    const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, ...runtimeRef(el) };
-
-    el.style.setProperty(prop, value === base ? "" : value);
+    const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, bucket, ...runtimeRef(el) };
 
     if (value === base) this.changes.delete(key);
     else this.changes.set(key, next);
+    this.syncSheet();
 
     const snap: Snapshot = { key, before, after: this.changes.get(key) };
     if (batch) batch.push(snap);
@@ -400,17 +454,18 @@ class EditStore {
     const max = "max" in spec ? (spec.max as number) : Infinity;
     const v = Math.min(max, Math.max(spec.min, round(value, spec.step)));
     const path = domPath(el);
-    const key = `${path}|${prop}`;
+    const bucket = bucketOf();
+    const key = changeKey(path, prop, bucket);
     const before = this.changes.get(key);
     const base = before ? before.base : `${readProp(el, prop)}${spec.unit}`;
     const d = describeFor(el, prop);
     const value2 = `${v}${spec.unit}`;
-    el.style.setProperty(prop, value2 === base ? "" : value2);
     if (value2 === base) this.changes.delete(key);
     else
       this.changes.set(key, {
-        key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value: value2, vw: edWin().innerWidth, ...runtimeRef(el),
+        key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value: value2, vw: edWin().innerWidth, bucket, ...runtimeRef(el),
       });
+    this.syncSheet();
     this.dirty = true;
     this.listeners.forEach((fn) => fn());
   }
@@ -420,7 +475,8 @@ class EditStore {
     this.ensureLive();
     if (!cssKeyOf(prop)) return;
     const path = domPath(el);
-    const key = `${path}|${prop}`;
+    const bucket = bucketOf();
+    const key = changeKey(path, prop, bucket);
     const before = this.changes.get(key);
     const base = before
       ? before.base
@@ -428,9 +484,9 @@ class EditStore {
         ? readStyle(el, prop)
         : `${readProp(el, prop as NumProp)}${PROPS[prop as NumProp]?.unit ?? ""}`;
     const d = describeFor(el, prop);
-    el.style.setProperty(prop, value === base ? "" : value);
     if (value === base) this.changes.delete(key);
-    else this.changes.set(key, { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, ...runtimeRef(el) });
+    else this.changes.set(key, { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, bucket, ...runtimeRef(el) });
+    this.syncSheet();
     this.dirty = true;
     this.listeners.forEach((fn) => fn());
   }
@@ -469,10 +525,16 @@ class EditStore {
     const key = snap.key;
     if (c) this.changes.set(key, c);
     else this.changes.delete(key);
-    const path = key.split("|")[0];
-    const prop = key.split("|").slice(1).join("|") as ChangeProp;
-    if (path === "page" || prop === "note") return;
     const ref = snap.after ?? snap.before;
+    const path = ref?.path ?? key.split("|")[0];
+    const prop = (ref?.prop ?? key.split("|")[1]) as ChangeProp;
+    if (path === "page" || prop === "note") return;
+    if (ref?.bucket) {
+      // a bucketed style change: the map is already updated by the caller
+      // pattern below, so recompiling the sheet IS the DOM write
+      this.syncSheet();
+      return;
+    }
     const el = ref ? resolveTarget(ref) : fromDomPath(path);
     if (!el) return;
     if (prop === "text") {
@@ -494,6 +556,7 @@ class EditStore {
     }
     if (!cssKeyOf(prop)) return;
     el.style.setProperty(prop, c ? c.value : "");
+    void c;
   }
 
   undo() {
@@ -529,6 +592,7 @@ class EditStore {
       after: undefined,
     }));
     batch.forEach((s) => this.restore(s, "redo"));
+    this.syncSheet();
     this.undoStack.push(batch);
     this.redoStack.length = 0;
     this.emit();
@@ -567,20 +631,16 @@ class EditStore {
     }
     let applied = 0;
     for (const c of saved) {
-      const el = resolveTarget(c);
-      if (!el) continue;
       if (c.prop === "text") {
+        const el = resolveTarget(c);
+        if (!el) continue;
         if (c.valueHtml != null) el.innerHTML = c.valueHtml;
         else el.textContent = c.value;
-      } else if (c.prop !== "note") {
-        const css = cssKeyOf(c.prop);
-        if (!css) continue;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (el.style as any)[css] = c.value;
       }
       this.changes.set(c.key, c);
       applied += 1;
     }
+    this.syncSheet();
     this.dirty = true;
     this.listeners.forEach((fn) => fn());
     return applied;
@@ -644,10 +704,10 @@ class EditStore {
       }
       lines.push("");
     };
-    emit("STYLE CHANGES (desktop viewport)", spacing.filter((c) => (c.vw ?? 1440) > 900));
+    emit("STYLE CHANGES (desktop viewport)", spacing.filter((c) => c.bucket !== "m"));
     emit(
       "STYLE CHANGES MADE AT A NARROW VIEWPORT (scope these in the phone media query, do not touch the base rule)",
-      spacing.filter((c) => (c.vw ?? 1440) <= 900),
+      spacing.filter((c) => c.bucket === "m"),
     );
 
     if (text.length) {

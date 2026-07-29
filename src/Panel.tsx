@@ -14,6 +14,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import {
+  winningRuleFor,
   GROUPS,
   PROPS,
   STYLE_GROUPS,
@@ -31,6 +32,7 @@ import {
   type NumProp,
 } from "./selectors";
 import { centring } from "./geometry";
+import { bucketOf, changeKey } from "./store";
 import { csOf } from "./context";
 import type { Change } from "./store";
 import type { FrameSpec } from "./Frame";
@@ -121,18 +123,18 @@ function BoxVal({
 function BoxModel({
   el,
   changedKeys,
-  path,
+  keyFor,
   onSet,
   onSetRaw,
 }: {
   el: HTMLElement;
   changedKeys: Set<string>;
-  path: string | null;
+  keyFor: (prop: string) => string;
   onSet: (prop: NumProp, v: number) => void;
   onSetRaw: (prop: string, v: string) => void;
 }) {
   const v = (p: NumProp) => readProp(el, p);
-  const chg = (p: string) => !!path && changedKeys.has(`${path}|${p}`);
+  const chg = (p: string) => changedKeys.has(keyFor(p));
   const cs = csOf(el);
   const bw = Math.round(parseFloat(cs.borderTopWidth) || 0);
   const r = el.getBoundingClientRect();
@@ -244,13 +246,15 @@ function NumRow({
     // committing: the store captures base by reading the element, and reading
     // it with the preview still applied recorded base == value, i.e. nothing
     scrub.current = { startX: e.clientX, base: value, prevInline: el.style.getPropertyValue(prop) };
+    void 0;
   };
   const onScrubMove = (e: React.PointerEvent) => {
     const s = scrub.current;
     if (!s) return;
     const mult = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
     const v = s.base + (e.clientX - s.startX) * spec.step * mult;
-    el.style.setProperty(prop, `${Math.max(spec.min, Math.round(v / spec.step) * spec.step)}${spec.unit}`);
+    // inline-important outranks the preview stylesheet's !important rules
+    el.style.setProperty(prop, `${Math.max(spec.min, Math.round(v / spec.step) * spec.step)}${spec.unit}`, "important");
   };
   const onScrubUp = (e: React.PointerEvent) => {
     const s = scrub.current;
@@ -633,6 +637,8 @@ export function Panel({
   setHover,
   tick,
   updateTo,
+  refSkin,
+  setRefSkin,
 }: {
   mode: "spacing" | "sections" | "mark";
   setMode: (m: "spacing" | "sections" | "mark") => void;
@@ -681,6 +687,8 @@ export function Panel({
   setHover: (el: HTMLElement | null) => void;
   tick: number;
   updateTo: string | null;
+  refSkin: { url: string; opacity: number; on: boolean } | null;
+  setRefSkin: (v: { url: string; opacity: number; on: boolean } | null) => void;
 }) {
   void tick; // re-render trigger; the panel reads the live DOM each pass
 
@@ -690,6 +698,8 @@ export function Panel({
   const c = primary ? centring(primary) : null;
   const primaryPath = primary ? domPath(primary) : null;
   const changedKeys = useMemo(() => new Set(changes.map((ch) => ch.key)), [changes]);
+  /** a prop's change identity at the CURRENT breakpoint bucket */
+  const keyFor = (prop: string) => (primaryPath ? changeKey(primaryPath, prop, bucketOf()) : "");
   const tokens = useMemo(() => (primary ? colorTokens() : []), [primary]);
   const fonts = useMemo(() => (primary ? loadedFonts() : []), [primary]);
 
@@ -766,8 +776,7 @@ export function Panel({
     }
   }
 
-  const groupHasChange = (props: readonly string[]) =>
-    !!primaryPath && props.some((p) => changedKeys.has(`${primaryPath}|${p}`));
+  const groupHasChange = (props: readonly string[]) => props.some((p) => changedKeys.has(keyFor(p)));
 
   const place: React.CSSProperties = pos ? { top: pos.y, left: pos.x } : { top: 12, right: 12 };
 
@@ -929,6 +938,17 @@ export function Panel({
                   <div style={{ color: "var(--pe-violet)", fontWeight: 700, fontSize: 11.5 }}>
                     {selection.length > 1 ? `${selection.length} selected` : describe(primary).label}
                   </div>
+                  {(() => {
+                    const d = describe(primary);
+                    if (d.file) return null;
+                    const w = winningRuleFor(primary, "display");
+                    if (!w) return null;
+                    return (
+                      <div style={{ color: "var(--pe-faint)", marginTop: 3, fontSize: 9.5 }}>
+                        rule: <span style={{ color: "var(--pe-dim)" }}>{w.selector}</span> · {w.file}
+                      </div>
+                    );
+                  })()}
                   {reach > 1 && (
                     <div style={{ color: "var(--pe-warn)", marginTop: 4, fontSize: 9.5 }}>shared rule · styling {reach} elements on this page</div>
                   )}
@@ -970,7 +990,7 @@ export function Panel({
                 )}
 
                 {/* the box model replaces the spacing and padding row-groups */}
-                <BoxModel el={primary} changedKeys={changedKeys} path={primaryPath} onSet={onSet} onSetRaw={onSetRaw} />
+                <BoxModel el={primary} changedKeys={changedKeys} keyFor={keyFor} onSet={onSet} onSetRaw={onSetRaw} />
 
                 {/* numeric groups */}
                 {GROUPS.filter((g) => g.title !== "spacing" && g.title !== "padding").map((g) => {
@@ -993,11 +1013,11 @@ export function Panel({
                                 prop={prop}
                                 value={values[0]}
                                 mixed={mixed}
-                                changed={!!primaryPath && changedKeys.has(`${primaryPath}|${prop}`)}
+                                changed={changedKeys.has(keyFor(prop))}
                                 el={primary}
                                 onSet={(v) => onSet(prop, v)}
                                 onSetRaw={(v) => onSetRaw(prop, v)}
-                                onResetKey={() => primaryPath && onResetOne(`${primaryPath}|${prop}`)}
+                                onResetKey={() => primaryPath && onResetOne(keyFor(prop))}
                               />
                             );
                           })}
@@ -1085,6 +1105,39 @@ export function Panel({
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* onion skin: drop a mock over the page and match it by eye */}
+          <div style={{ display: "flex", gap: 8, padding: "8px 14px", borderTop: "1px solid var(--pe-border)", alignItems: "center", flex: "none" }}>
+            <span style={{ color: "var(--pe-faint)", fontSize: 10.5, flex: "none" }}>reference</span>
+            <label className="pe-btn sm" style={{ cursor: "pointer" }}>
+              {refSkin ? "replace" : "load a mock…"}
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setRefSkin({ url: URL.createObjectURL(f), opacity: 0.5, on: true });
+                }}
+              />
+            </label>
+            {refSkin && (
+              <>
+                <button className={`pe-btn sm${refSkin.on ? " on" : ""}`} onClick={() => setRefSkin({ ...refSkin, on: !refSkin.on })}>
+                  {refSkin.on ? "shown" : "hidden"}
+                </button>
+                <input
+                  type="range"
+                  min={5}
+                  max={95}
+                  value={Math.round(refSkin.opacity * 100)}
+                  onChange={(e) => setRefSkin({ ...refSkin, opacity: Number(e.target.value) / 100 })}
+                  style={{ flex: 1, accentColor: "var(--pe-blue)" }}
+                />
+                <button className="pe-btn sm" onClick={() => setRefSkin(null)}>✕</button>
+              </>
             )}
           </div>
 

@@ -58,7 +58,7 @@ import {
   snapVertical,
   verticalGaps,
 } from "./geometry";
-import { store, type Change } from "./store";
+import { bucketOf, changeKey, store, type Change } from "./store";
 import { VERSION } from "./version";
 import { Overlay } from "./Overlay";
 import { Panel, type MoveMode, type Tab } from "./Panel";
@@ -141,6 +141,8 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   const [scopeAll, setScopeAll] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
   const [updateTo, setUpdateTo] = useState<string | null>(null);
+  /** the onion-skin: a reference mock floated over the page to match by eye */
+  const [refSkin, setRefSkin] = useState<{ url: string; opacity: number; on: boolean } | null>(null);
   const [showingOriginal, setShowingOriginal] = useState(false);
   const [variantSaved, setVariantSaved] = useState<{ A: boolean; B: boolean }>({
     A: store.hasVariant("A"),
@@ -544,11 +546,10 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
             startY: e.clientY,
             baseW: r.width,
             baseH: r.height,
-            starts: [
-              { key: `${p}|width`, before: store.changes.get(`${p}|width`) },
-              { key: `${p}|height`, before: store.changes.get(`${p}|height`) },
-              { key: `${p}|max-width`, before: store.changes.get(`${p}|max-width`) },
-            ],
+            starts: ["width", "height", "max-width"].map((prop) => {
+              const k = changeKey(p, prop, bucketOf());
+              return { key: k, before: store.changes.get(k) };
+            }),
             moved: false,
           };
           edDoc().body.style.cursor = nearE && nearS ? "nwse-resize" : nearE ? "ew-resize" : "ns-resize";
@@ -608,10 +609,10 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
           moved: false,
           starts: els.flatMap((x) => {
             const p = store.pathOf(x);
-            return ["margin-top", "margin-left", "translate"].map((prop) => ({
-              key: `${p}|${prop}`,
-              before: store.changes.get(`${p}|${prop}`),
-            }));
+            return ["margin-top", "margin-left", "translate"].map((prop) => {
+              const k = changeKey(p, prop, bucketOf());
+              return { key: k, before: store.changes.get(k) };
+            });
           }),
         };
         edDoc().body.style.cursor = "grabbing";
@@ -1171,6 +1172,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       note={note}
       pins={pins}
       liveStroke={liveStroke}
+      refSkin={refSkin}
     />
   );
 
@@ -1258,6 +1260,8 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         setHover={setHover}
         tick={tick}
         updateTo={updateTo}
+        refSkin={refSkin}
+        setRefSkin={setRefSkin}
       />
 
       {/* note input: a floating field, because prompt() would freeze the page */}

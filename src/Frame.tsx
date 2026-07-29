@@ -60,9 +60,23 @@ export function Frame({
     const el = iframeRef.current;
     if (!el) return;
     const handleLoad = () => {
-      if (el.contentWindow && el.contentDocument) onReady(el.contentWindow, el.contentDocument);
+      try {
+        if (el.contentWindow && el.contentDocument) onReady(el.contentWindow, el.contentDocument);
+      } catch {
+        // opaque origin (file:// pages): the frame renders but cannot be
+        // edited; real http(s) pages are unaffected
+      }
     };
     el.addEventListener("load", handleLoad);
+    // A fast page (file://, cache) finishes loading BEFORE this effect runs, so
+    // the load event is already gone and the realm handoff never happened. Hand
+    // off immediately when the REAL document is already there; the initial
+    // about:blank that every iframe carries for a tick must not count, handing
+    // the editor that dead realm was worse than missing the event.
+    const doc = el.contentDocument;
+    if (doc && doc.readyState !== "loading" && doc.body && doc.URL !== "about:blank") {
+      handleLoad();
+    }
     return () => el.removeEventListener("load", handleLoad);
   }, [onReady]);
 

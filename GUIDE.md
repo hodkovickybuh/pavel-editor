@@ -54,6 +54,8 @@ You never have to think about how; the report explains it to the developer.
 | circle something, like a review | switch to **✎ mark**, draw around it, type the note |
 | use responsive units | type `10vw`, `50%` or `40dvh` straight into any number field |
 | preview on iPhone | press **device**, pick a size; you can keep editing inside it |
+| edit desktop and phone separately | just edit at each size; changes only apply at the size you made them |
+| match a design mock | **reference** row at the panel's foot: load the image, set opacity |
 | edit margins/padding visually | the nested box diagram in the panel; click any number in it |
 | compare with the original | press **before/after**; click again to come back |
 | try two directions | **variants**: click **A +** to save, edit differently, **B +**, then click A/B to compare |

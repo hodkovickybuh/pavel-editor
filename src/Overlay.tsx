@@ -118,6 +118,7 @@ export function Overlay({
   note,
   pins,
   liveStroke,
+  refSkin,
 }: {
   hover: HTMLElement | null;
   selection: HTMLElement[];
@@ -133,12 +134,24 @@ export function Overlay({
   pins: Array<{ el: HTMLElement; text: string; n: number; mark?: string }>;
   /** the freehand circling stroke currently being drawn, SVG points */
   liveStroke: string | null;
+  /** onion-skin reference image floated over the page */
+  refSkin: { url: string; opacity: number; on: boolean } | null;
 }) {
   const primary = selection[0] ?? null;
   const c = showCentring && primary ? centring(primary) : null;
 
   return (
     <div data-editmode-ui="">
+      {/* the onion skin: match a reference mock by eye, Figma-overlay style */}
+      {refSkin?.on && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={refSkin.url}
+          alt=""
+          style={{ ...base, top: 0, left: "50%", transform: "translateX(-50%)", width: "100vw", opacity: refSkin.opacity, objectFit: "contain", objectPosition: "top" }}
+        />
+      )}
+
       {/* an 8px baseline grid, the scale the spacing is supposed to sit on */}
       {showGrid && (
         <div

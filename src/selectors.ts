@@ -453,6 +453,9 @@ export function winningRuleFor(el: Element, prop: string): { selector: string; f
       if (typeof sr.selectorText !== "string" || !sr.style?.getPropertyValue(prop)) continue;
       for (const part of sr.selectorText.split(",")) {
         const p = part.trim();
+        // universal and bare-root selectors are resets, not the rule anyone
+        // means when they ask "where is this styled"
+        if (p === "*" || p === "html" || p === "body" || p === ":root") continue;
         try {
           if (!el.matches(p)) continue;
         } catch {
