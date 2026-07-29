@@ -1,15 +1,25 @@
 <div align="center">
 
-# ✎ PAVEL EDITOR
+<img src="assets/icon.png" width="110" alt="">
+
+# PAVEL EDITOR
 
 **A Figma-style visual editor that runs inside any live web page.**
 
-Click things. Drag them. Restyle them. Preview on any device. Pin notes.
+Click things. Drag them. Restyle them. Preview on any device. Circle what bothers you.
 Then press one button and hand the whole session to your AI assistant as a report it applies to your real stylesheets.
 
-### ▶ [Try it right now, in your browser, one click](https://hodkovickybuh.github.io/pavel-editor/demo/)
+<br>
 
-*No build step · no framework requirement · no server · one script*
+[![Download the Chrome extension](https://img.shields.io/badge/%E2%AC%87%EF%B8%8E%20%20Download%20the%20Chrome%20extension-B2D5E5?style=for-the-badge&labelColor=23212C)](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip)
+[![Try the live demo](https://img.shields.io/badge/%E2%96%B6%20%20Try%20the%20live%20demo-99E1D9?style=for-the-badge&labelColor=23212C)](https://hodkovickybuh.github.io/pavel-editor/demo/)
+[![Read the guide](https://img.shields.io/badge/%F0%9F%93%96%20%20Read%20the%20guide-8a86a8?style=for-the-badge&labelColor=23212C)](GUIDE.md)
+
+[![release](https://img.shields.io/github/v/release/hodkovickybuh/pavel-editor?style=flat-square&color=99E1D9&labelColor=23212C)](https://github.com/hodkovickybuh/pavel-editor/releases)
+[![downloads](https://img.shields.io/github/downloads/hodkovickybuh/pavel-editor/total?style=flat-square&color=B2D5E5&labelColor=23212C)](https://github.com/hodkovickybuh/pavel-editor/releases)
+![license](https://img.shields.io/badge/license-MIT-8a86a8?style=flat-square&labelColor=23212C)
+
+<br>
 
 ![PAVEL EDITOR](assets/editor.png)
 
@@ -17,7 +27,7 @@ Then press one button and hand the whole session to your AI assistant as a repor
 
 ## Get it
 
-**The Chrome extension is the way.** It works on every site, including the ones that block scripts (github.com, banks, most big products). [**Download the extension zip from Releases**](../../releases/latest), unzip it, then:
+**The Chrome extension is the way.** It works on every site, including the ones that block scripts (github.com, banks, most big products). [**⬇ Download the zip**](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip) (always the newest version), unzip it, then:
 
 ```
 1. chrome://extensions → turn on Developer mode (top right)
