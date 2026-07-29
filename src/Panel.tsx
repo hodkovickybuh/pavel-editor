@@ -447,6 +447,58 @@ function TextRow({ label, value, placeholder, onSet }: { label: string; value: s
   );
 }
 
+/** the complete keys and gestures sheet, openable any time via ? */
+function KeysSheet() {
+  const K = ({ k }: { k: string }) => <span className="pe-key">{k}</span>;
+  const Row = ({ keys, children }: { keys: React.ReactNode; children: React.ReactNode }) => (
+    <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "3px 0" }}>
+      <span style={{ flex: "none", minWidth: 86 }}>{keys}</span>
+      <span style={{ color: "var(--pe-dim)" }}>{children}</span>
+    </div>
+  );
+  const H = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ color: "var(--pe-text)", fontWeight: 700, letterSpacing: "0.06em", margin: "14px 0 4px", fontSize: 11 }}>{children}</div>
+  );
+  return (
+    <div style={{ padding: "6px 16px 16px", fontSize: 10.5, lineHeight: 1.6 }}>
+      <H>SELECT</H>
+      <Row keys={<>click</>}>select · <K k="⇧" />+click adds or removes</Row>
+      <Row keys={<>drag empty</>}>box-select several things at once</Row>
+      <Row keys={<>2× click</>}>on text: edit the words · on a group: enter it</Row>
+      <Row keys={<><K k="←" /> <K k="→" /></>}>select the parent / the child</Row>
+      <Row keys={<K k="esc" />}>deselect</Row>
+
+      <H>MOVE & RESIZE</H>
+      <Row keys={<>drag</>}>move the selected thing (solo: only it moves)</Row>
+      <Row keys={<><K k="⌥" />+drag</>}>free-roam: no snapping, no auto-reorder</Row>
+      <Row keys={<>drag in a row</>}>inside a flex/grid row it REORDERS the cards</Row>
+      <Row keys={<>drag edge</>}>right or bottom edge resizes, corner does both</Row>
+      <Row keys={<><K k="↑" /> <K k="↓" /></>}>nudge 1px · <K k="⇧" /> makes it 10px</Row>
+      <Row keys={<K k="P" />}>solo ↔ push: what happens to content below</Row>
+
+      <H>EDIT</H>
+      <Row keys={<K k="⏎" />}>edit the selected text</Row>
+      <Row keys={<K k="N" />}>pin a note to the selection</Row>
+      <Row keys={<><K k="⌘C" /> <K k="⌘V" /></>}>copy one element's style onto another</Row>
+      <Row keys={<K k="D" />}>duplicate (preview only)</Row>
+      <Row keys={<K k="⌫" />}>hide (undoable)</Row>
+      <Row keys={<>type units</>}>any number field takes 10vw · 50% · 40dvh · 3rem</Row>
+      <Row keys={<>drag a label</>}>scrub its value · <K k="⇧" /> ×10 · <K k="⌥" /> fine</Row>
+      <Row keys={<>drop a file</>}>onto any image to swap that image</Row>
+      <Row keys={<><K k="⌘Z" /> <K k="⇧⌘Z" /></>}>undo · redo, one step per gesture</Row>
+
+      <H>SEE</H>
+      <Row keys={<>hover</>}>margins and padding shade automatically</Row>
+      <Row keys={<><K k="⌥" />+hover</>}>distances from the selection to anything</Row>
+      <Row keys={<><K k="S" /> <K k="C" /> <K k="G" /></>}>spacing bands · centring · 8px grid</Row>
+      <Row keys={<>before/after</>}>flip the whole page to the original and back</Row>
+      <Row keys={<K k="Tab" />}>sections mode: drag whole page sections</Row>
+      <Row keys={<>✎ mark</>}>circle anything freehand, attach a note</Row>
+      <Row keys={<K k="?" />}>open or close this sheet</Row>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------ layers tree */
 
 function Layers({
@@ -565,6 +617,8 @@ export function Panel({
   onDelete,
   onNote,
   onOff,
+  showKeys,
+  setShowKeys,
   showingOriginal,
   onToggleOriginal,
   variantSaved,
@@ -610,6 +664,8 @@ export function Panel({
   onDelete: () => void;
   onNote: () => void;
   onOff: () => void;
+  showKeys: boolean;
+  setShowKeys: (v: boolean) => void;
   showingOriginal: boolean;
   onToggleOriginal: () => void;
   variantSaved: { A: boolean; B: boolean };
@@ -720,6 +776,9 @@ export function Panel({
         </span>
         <span className="pe-chip">{frameSpec ? `${frameSpec.w}×${frameSpec.h}` : "desktop"}</span>
         <span style={{ flex: 1 }} />
+        <button className={`pe-btn sm${showKeys ? " on" : ""}`} onClick={() => setShowKeys(!showKeys)} title="keys & gestures · ?">
+          ?
+        </button>
         <button className="pe-btn sm" onClick={onUndo} disabled={!canUndo} title="undo · cmd+Z">
           ↶
         </button>
@@ -817,7 +876,8 @@ export function Panel({
           </div>
 
           <div className="pe-scroll">
-            {tab === "design" && !primary && (
+            {showKeys && <KeysSheet />}
+            {!showKeys && tab === "design" && !primary && (
               <div style={{ padding: "14px 16px", color: "var(--pe-dim)", fontSize: 10.5, lineHeight: 2.1 }}>
                 <div style={{ color: "var(--pe-text)", fontWeight: 700, marginBottom: 6, letterSpacing: "0.06em" }}>START</div>
                 click anything to select it
@@ -837,10 +897,13 @@ export function Panel({
                 <br />
                 <span className="pe-key">esc</span> deselect&nbsp;&nbsp;<span className="pe-key">←</span>
                 <span className="pe-key">→</span> walk the tree
+                <br />
+                <br />
+                press <span className="pe-key">?</span> for EVERY key and gesture
               </div>
             )}
 
-            {tab === "design" && primary && (
+            {!showKeys && tab === "design" && primary && (
               <>
                 {/* identity */}
                 <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--pe-border)" }}>
@@ -989,9 +1052,9 @@ export function Panel({
               </>
             )}
 
-            {tab === "layers" && <Layers root={root} selection={selection} onPick={(el) => setSelection([el])} onHover={setHover} />}
+            {!showKeys && tab === "layers" && <Layers root={root} selection={selection} onPick={(el) => setSelection([el])} onHover={setHover} />}
 
-            {tab === "changes" && (
+            {!showKeys && tab === "changes" && (
               <div style={{ padding: "10px 0" }}>
                 {!changes.length && <span style={{ color: "var(--pe-faint)", padding: "0 14px" }}>no changes yet · everything you edit lands here</span>}
                 {changes.map((ch) => (

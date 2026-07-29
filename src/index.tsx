@@ -138,6 +138,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   const [showGrid, setShowGrid] = useState(false);
   const [showCentring, setShowCentring] = useState(true);
   const [scopeAll, setScopeAll] = useState(false);
+  const [showKeys, setShowKeys] = useState(false);
   const [showingOriginal, setShowingOriginal] = useState(false);
   const [variantSaved, setVariantSaved] = useState<{ A: boolean; B: boolean }>({
     A: store.hasVariant("A"),
@@ -828,6 +829,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       const sel = selRef.current;
       const primary = sel[0];
 
+      if (e.key === "?") return setShowKeys((v) => !v);
       if (e.key === "s" || e.key === "S") return setShowSpacing((v) => !v);
       if (e.key === "g" || e.key === "G") return setShowGrid((v) => !v);
       if (e.key === "c" || e.key === "C") return setShowCentring((v) => !v);
@@ -1210,6 +1212,8 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
           setHover(null);
           closeFrame();
         }}
+        showKeys={showKeys}
+        setShowKeys={setShowKeys}
         showingOriginal={showingOriginal}
         onToggleOriginal={toggleOriginal}
         variantSaved={variantSaved}
