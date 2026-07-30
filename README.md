@@ -26,13 +26,17 @@ Then press one button and hand the whole session to your AI assistant as a repor
 
 ## Watch it work · 3 minutes, narrated
 
-<video src="https://github.com/hodkovickybuh/pavel-editor/raw/main/demo/video/pavel-editor-walkthrough.mp4" poster="assets/video-poster.jpg" controls muted playsinline width="100%"></video>
+<div align="center">
 
 <a href="https://hodkovickybuh.github.io/pavel-editor/demo/install.html#video">
-  <img src="assets/highlight.gif" alt="PAVEL EDITOR: selecting, dragging and inspecting a live page" width="100%">
+  <img src="assets/highlight.gif" alt="PAVEL EDITOR: selecting an element, dragging it, editing at a phone width, and running the audit" width="100%">
 </a>
 
-<sub>If the player above does not appear in your reader, **[watch it on the guide page](https://hodkovickybuh.github.io/pavel-editor/demo/install.html#video)** (subtitles and clickable chapters) or **[download the MP4](https://hodkovickybuh.github.io/pavel-editor/demo/video/pavel-editor-walkthrough.mp4)**.</sub>
+### ▶ [Watch the full narrated walkthrough](https://hodkovickybuh.github.io/pavel-editor/demo/install.html#video)
+
+**3:15 · voiced · subtitles and clickable chapters** · or [download the MP4](https://hodkovickybuh.github.io/pavel-editor/demo/video/pavel-editor-walkthrough.mp4)
+
+</div>
 
 | | | | |
 |---|---|---|---|
@@ -40,7 +44,7 @@ Then press one button and hand the whole session to your AI assistant as a repor
 | **1:22** Breakpoints | **1:45** States | **2:01** The audit | **2:21** Tokens |
 | **2:36** Notes and marks | **2:49** Handing it over | | |
 
-
+The loop above is silent and shows three moments from it. The full film installs the extension, then walks every tool: selecting, moving, resizing, reordering, breakpoint bands, hover states, the audit, tokens, notes, and how the report reaches a codebase.
 
 ## Get it
 
