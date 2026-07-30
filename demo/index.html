@@ -136,8 +136,9 @@ img, svg { display: block; max-width: 100%; }
 .site-head.scrolled { box-shadow: 0 10px 30px rgba(0, 34, 90, 0.07); }
 .nav { display: flex; align-items: center; gap: var(--space-8); min-height: 72px; }
 .brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  min-height: 44px;
   gap: var(--space-3);
   font-family: "DM Sans", sans-serif;
   font-weight: 700;
@@ -371,7 +372,7 @@ img, svg { display: block; max-width: 100%; }
   margin-bottom: var(--space-12);
 }
 .plan-toggle button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--space-6);
   border: none;
   border-radius: var(--radius-pill);
@@ -554,9 +555,10 @@ img, svg { display: block; max-width: 100%; }
 /* --------------------------------------------------------- playground */
 .playground { border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); padding: var(--space-10); background: var(--paper); }
 .playground h3 { font-size: var(--text-xl); }
-.playground > p { margin-top: var(--space-3); color: var(--ink-soft); font-size: var(--text-sm); }
+.playground > p { margin-top: var(--space-3); color: var(--ink-soft); font-size: var(--text-sm); max-width: var(--measure); }
 .faults { margin-top: var(--space-8); display: grid; gap: var(--space-6); }
 .fault { padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.fault p:not(.fault-long) { max-width: var(--measure); }
 .fault h4 { font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.08em; color: var(--blue-500); }
 /* deliberately too light, so the contrast check has a real failure to find */
 .fault-faint { color: #b9c0cc; margin-top: var(--space-3); }
@@ -691,7 +693,7 @@ img, svg { display: block; max-width: 100%; }
 
   <!-- ======================================================== hero -->
   <section class="hero">
-    <img class="hero-wash" src="img/wash.svg" alt="" aria-hidden="true">
+    <img class="hero-wash" src="img/wash.svg" alt="" aria-hidden="true" width="1600" height="900">
     <div class="wrap hero-grid">
       <div>
         <div class="rise"><span class="badge"><b>New</b> The Meridian collection, spring</span></div>
@@ -758,15 +760,15 @@ img, svg { display: block; max-width: 100%; }
       </div>
       <div class="bento">
         <figure class="tile tile-wide tile-tall">
-          <img src="img/g1.svg" alt="An open notebook, a pen and a small dish arranged on pale paper">
+          <img src="img/g1.svg" alt="An open notebook, a pen and a small dish arranged on pale paper" width="600" height="600">
           <figcaption class="tile-label">Desk set, oak and bone</figcaption>
         </figure>
         <figure class="tile">
-          <img src="img/g2.svg" alt="Morning light crossing a white plaster wall">
+          <img src="img/g2.svg" alt="Morning light crossing a white plaster wall" width="600" height="600">
           <figcaption class="tile-label">Wall light, 03</figcaption>
         </figure>
         <figure class="tile">
-          <img src="img/g3.svg" alt="Folded heavy paper with one navy edge">
+          <img src="img/g3.svg" alt="Folded heavy paper with one navy edge" width="600" height="600">
           <figcaption class="tile-label">Folio, navy edge</figcaption>
         </figure>
       </div>
@@ -1105,6 +1107,6 @@ img, svg { display: block; max-width: 100%; }
 })();
 </script>
 
-<script src="../dist/pavel-editor.js?v=1.9.1"></script>
+<script src="../dist/pavel-editor.js?v=1.9.2"></script>
 </body>
 </html>

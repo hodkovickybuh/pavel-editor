@@ -62,12 +62,22 @@ export const contrastRatio = (a: RGBA, b: RGBA) => {
   return (l1 + 0.05) / (l2 + 0.05);
 };
 
-/** the colour actually painted behind an element: the first opaque ancestor */
-function effectiveBg(el: HTMLElement): RGBA {
+/**
+ * The colour actually painted behind an element: the first opaque ancestor.
+ *
+ * Returns null when something in the stack paints an IMAGE or a gradient. A
+ * gradient's contrast varies across its own area and cannot be reduced to one
+ * number by reading the CSSOM, so the honest answer is "not measurable here"
+ * rather than a confident wrong ratio. Reporting 1.00:1 for white text on a navy
+ * gradient, which this did, is worse than reporting nothing.
+ */
+function effectiveBg(el: HTMLElement): RGBA | null {
   let node: HTMLElement | null = el;
   let acc: RGBA | null = null;
   while (node) {
-    const bg = parseColor(csOf(node).backgroundColor);
+    const cs = csOf(node);
+    if (cs.backgroundImage && cs.backgroundImage !== "none") return null;
+    const bg = parseColor(cs.backgroundColor);
     if (bg && bg[3] > 0) {
       acc = acc ? over(acc, bg) : bg;
       if (bg[3] >= 0.99) return acc;
@@ -163,19 +173,25 @@ export function runAudit(): Finding[] {
         out.push({ level: "warn", rule: "cls", msg: "image has no width/height or aspect-ratio: it will shift the layout as it loads", el });
     }
 
-    // touch targets. WCAG 2.5.5 asks 44x44; the house rule is 48 on phones.
-    const interactive =
-      tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "SELECT" || el.getAttribute("role") === "button";
-    if (interactive && r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44)) {
-      // inline links inside a paragraph are exempt: WCAG's own exception
-      const inText = tag === "A" && el.parentElement && ownText(el.parentElement).length > 0;
-      if (!inText)
+    // touch targets. 24x24 is the AA floor (WCAG 2.5.8); 44x44 is the AAA
+    // ambition (2.5.5) and the practical one on a phone. Controls are held to
+    // 44, plain text links to 24, because holding every link in a footer to 44
+    // buries the real failures in noise.
+    const isControl = tag === "BUTTON" || tag === "INPUT" || tag === "SELECT" || el.getAttribute("role") === "button";
+    const isLink = tag === "A";
+    if ((isControl || isLink) && r.width > 0 && r.height > 0) {
+      // a link inside a sentence is exempt: WCAG's own inline exception
+      const inText = isLink && el.parentElement ? ownText(el.parentElement).length > 0 : false;
+      const floor = isControl ? 44 : 24;
+      const small = Math.min(r.width, r.height) < floor;
+      if (small && !inText) {
         out.push({
-          level: narrow ? "fail" : "warn",
+          level: isControl && narrow ? "fail" : "warn",
           rule: "target",
-          msg: `tap target is ${Math.round(r.width)}×${Math.round(r.height)}, under the 44px minimum: ${shortLabel(el)}`,
+          msg: `tap target is ${Math.round(r.width)}×${Math.round(r.height)}, under the ${floor}px minimum for ${isControl ? "a control" : "a standalone link"}: ${shortLabel(el)}`,
           el,
         });
+      }
     }
 
     const text = ownText(el);
@@ -185,8 +201,8 @@ export function runAudit(): Finding[] {
 
     // contrast, on real painted colours
     const fg = parseColor(cs.color);
-    if (fg) {
-      const bg = effectiveBg(el);
+    const bg = fg ? effectiveBg(el) : null;
+    if (fg && bg) {
       const solid = fg[3] < 1 ? over(fg, bg) : fg;
       const ratio = contrastRatio(solid, bg);
       const large = size >= 24 || (size >= 18.66 && weight >= 700);
@@ -219,16 +235,31 @@ export function runAudit(): Finding[] {
 
   // off-scale spacing, counted rather than listed: one warning, not forty
   let offScale = 0;
+  const offenders: string[] = [];
+  let firstOffender: HTMLElement | null = null;
   for (const el of els.slice(0, 1200)) {
     if (!isEditable(el)) continue;
     const cs = csOf(el);
     for (const p of ["marginTop", "marginBottom", "paddingTop", "paddingBottom"] as const) {
       const v = parseFloat(cs[p]) || 0;
-      if (v > 0 && v % 4 !== 0) offScale += 1;
+      // under 4px is a hairline, not a spacing decision, and it is usually the
+      // browser's own default button padding rather than anything a designer chose
+      if (v >= 4 && Math.abs(v % 4) > 0.01) {
+        offScale += 1;
+        if (offenders.length < 3) {
+          offenders.push(`${shortLabel(el)} ${p.replace("Top", "-top").replace("Bottom", "-bottom").replace("margin", "margin").replace("padding", "padding")}: ${Math.round(v * 10) / 10}px`);
+          if (!firstOffender) firstOffender = el;
+        }
+      }
     }
   }
-  if (offScale > 8) {
-    out.push({ level: "warn", rule: "scale", msg: `${offScale} spacing values are not multiples of 4px: the page has no single spacing scale`, el: null });
+  if (offScale >= 3) {
+    out.push({
+      level: "warn",
+      rule: "scale",
+      msg: `${offScale} spacing values are not multiples of 4px, so the page has no single spacing scale. First few: ${offenders.join(" · ")}`,
+      el: firstOffender,
+    });
   }
 
   const order = { fail: 0, warn: 1 };
