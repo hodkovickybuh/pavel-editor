@@ -255,6 +255,12 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   // codebase instead of through a clipboard and a paste.
   useEffect(() => {
     if (!on) return;
+    // only on a local page. A refused connection is logged by the browser itself
+    // whatever we catch, so pinging from a public site printed a red console
+    // error on every page load and read as a broken tool. The bridge only ever
+    // serves a project on this machine anyway.
+    const host = location.hostname;
+    if (!(host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host.endsWith(".local") || host.endsWith(".localhost"))) return;
     let alive = true;
     fetch("http://127.0.0.1:7331/ping", { mode: "cors" })
       .then((r) => (r.ok ? r.json() : null))

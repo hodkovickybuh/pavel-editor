@@ -38,7 +38,7 @@ Then press one button and hand the whole session to your AI assistant as a repor
 **Script tag**, for a site you own (pin a release tag, `@main` caches for hours):
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.9.0/dist/pavel-editor.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.9.1/dist/pavel-editor.js"></script>
 ```
 
 <details>
@@ -47,7 +47,7 @@ Then press one button and hand the whole session to your AI assistant as a repor
 Sites you do not control (github.com, banks, most big products) send a Content-Security-Policy that blocks ALL outside scripts. Pasting this there produces a "violates the following Content Security Policy" error every time; that is the site refusing, not the editor breaking. **It cannot be tested on github.com.** To just try the editor, use the [live demo](https://hodkovickybuh.github.io/pavel-editor/demo/) or the extension. On your own localhost or site, paste away:
 
 ```js
-var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.9.0/dist/pavel-editor.js';document.body.appendChild(s);
+var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.9.1/dist/pavel-editor.js';document.body.appendChild(s);
 ```
 
 </details>
