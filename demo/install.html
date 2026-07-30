@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install PAVEL EDITOR · the full guide</title>
+<meta name="description" content="How to install and use PAVEL EDITOR today, while it is not in the Chrome Web Store: developer mode, load unpacked, and every way to run it. With a narrated video.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy-900: #00225a;
+  --navy-700: #123a86;
+  --blue-500: #2f5fd0;
+  --blue-100: #e6ecfa;
+  --paper: #ffffff;
+  --surface: #f8f9fb;
+  --surface-2: #eef1f7;
+  --ink: #0b1220;
+  --ink-soft: #46536b;
+  --line: rgba(0, 34, 90, 0.10);
+  --line-strong: rgba(0, 34, 90, 0.20);
+  --amber: #8a6100;
+  --amber-bg: #fff8e6;
+
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
+  --space-20: 80px; --space-24: 96px;
+
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-xl: 24px; --radius-pill: 999px;
+  --text-xs: 12px; --text-sm: 14px; --text-base: 16px; --text-lg: 18px;
+  --text-xl: 22px; --text-2xl: 28px; --text-3xl: 36px; --text-4xl: 48px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Inter, -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { font-family: "DM Sans", Inter, system-ui, sans-serif; color: var(--navy-900); letter-spacing: -0.02em; line-height: 1.15; margin: 0; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+a { color: var(--navy-700); }
+img, svg, video { display: block; max-width: 100%; }
+code, kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  color: var(--navy-900);
+}
+pre {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-5);
+  background: #0c1a3a;
+  color: #e7edfa;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+pre code { background: none; color: inherit; padding: 0; }
+
+.wrap { width: 100%; max-width: 900px; margin: 0 auto; padding: 0 var(--space-6); }
+.wide { max-width: 1160px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 48px; padding: 0 var(--space-6);
+  border: 1px solid transparent; border-radius: var(--radius-pill);
+  font: inherit; font-weight: 500; cursor: pointer; text-decoration: none;
+  transition: transform 200ms var(--ease), background-color 200ms var(--ease), box-shadow 240ms var(--ease), border-color 200ms var(--ease);
+}
+.btn-primary { background: var(--navy-900); color: #fff; }
+.btn-primary:hover { background: var(--navy-700); transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,34,90,0.22); }
+.btn-ghost { background: transparent; color: var(--navy-900); border-color: var(--line-strong); }
+.btn-ghost:hover { background: var(--surface-2); border-color: var(--navy-900); }
+.btn:focus-visible { outline: 2px solid var(--blue-500); outline-offset: 3px; }
+
+/* ------------------------------------------------------------- header */
+.top { border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.9); position: sticky; top: 0; z-index: 20; backdrop-filter: blur(12px); }
+.top .wrap { display: flex; align-items: center; gap: var(--space-6); min-height: 68px; }
+.brand { display: flex; align-items: center; gap: var(--space-3); font-family: "DM Sans", sans-serif; font-weight: 700; color: var(--navy-900); text-decoration: none; }
+.brand-mark { width: 26px; height: 26px; border-radius: var(--radius-sm); background: linear-gradient(140deg, var(--navy-700), var(--navy-900)); flex: none; }
+.top nav { margin-left: auto; display: flex; gap: var(--space-5); }
+.top nav a { font-size: var(--text-sm); color: var(--ink-soft); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
+.top nav a:hover { color: var(--navy-900); }
+
+/* --------------------------------------------------------------- hero */
+.hero { padding: var(--space-20) 0 var(--space-12); background: linear-gradient(180deg, #fff, var(--surface)); border-bottom: 1px solid var(--line); }
+.hero h1 { font-size: clamp(34px, 5vw, 60px); }
+.hero p { margin-top: var(--space-5); font-size: var(--text-lg); color: var(--ink-soft); max-width: 60ch; }
+.hero .btns { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8); }
+.pill { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill); background: var(--blue-100); color: var(--navy-700); font-size: var(--text-xs); font-weight: 500; }
+
+/* --------------------------------------------------------------- note */
+.note {
+  display: flex; gap: var(--space-4);
+  margin-top: var(--space-8); padding: var(--space-5) var(--space-6);
+  background: var(--amber-bg); border: 1px solid #f0dca8; border-radius: var(--radius-md);
+  font-size: var(--text-sm); color: var(--amber);
+}
+.note b { color: #6b4b00; }
+.note-icon { flex: none; font-size: 18px; line-height: 1.3; }
+
+/* -------------------------------------------------------------- video */
+.video { padding: var(--space-16) 0; }
+/* the panel's own type is 11px, so the film is shown at close to 1:1 rather than
+   scaled down into illegibility */
+.video .wrap { max-width: 1480px; }
+.video-frame { border: 1px solid var(--line); border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 30px 70px rgba(0,34,90,0.12); background: #0c1a3a; }
+.video-frame video { width: 100%; height: auto; }
+.video-meta { display: flex; flex-wrap: wrap; gap: var(--space-4); justify-content: space-between; margin-top: var(--space-4); font-size: var(--text-sm); color: var(--ink-soft); }
+.chapters { margin-top: var(--space-8); display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
+.chapter { display: flex; gap: var(--space-3); padding: var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); font-size: var(--text-sm); }
+.chapter time { flex: none; font-family: ui-monospace, Menlo, monospace; color: var(--blue-500); font-size: var(--text-xs); padding-top: 2px; }
+.chapter b { display: block; color: var(--ink); }
+.chapter span { color: var(--ink-soft); }
+
+/* -------------------------------------------------------------- steps */
+.section { padding: var(--space-16) 0; border-top: 1px solid var(--line); }
+.section > .wrap > .eyebrow { font-size: var(--text-sm); font-weight: 500; color: var(--blue-500); margin-bottom: var(--space-3); }
+.section h2 { font-size: clamp(26px, 3.2vw, var(--text-3xl)); }
+.section > .wrap > p { margin-top: var(--space-4); color: var(--ink-soft); max-width: 68ch; }
+
+.steps { margin-top: var(--space-12); display: grid; gap: var(--space-8); counter-reset: step; }
+.step { display: grid; grid-template-columns: 52px 1fr; gap: var(--space-6); }
+.step-n {
+  width: 44px; height: 44px; display: grid; place-items: center;
+  border-radius: var(--radius-pill); background: var(--navy-900); color: #fff;
+  font-family: "DM Sans", sans-serif; font-weight: 700;
+}
+.step h3 { font-size: var(--text-xl); }
+.step p { margin-top: var(--space-3); color: var(--ink-soft); }
+.step-figure { margin: var(--space-5) 0 0; }
+
+/* the illustrated mock of Chrome's own UI. A drawing, not a screenshot: it
+   stays correct when Chrome moves a button by two pixels. */
+.mock { border: 1px solid var(--line-strong); border-radius: var(--radius-md); overflow: hidden; background: var(--paper); box-shadow: 0 12px 30px rgba(0,34,90,0.08); }
+.mock-bar { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.mock-dots { display: flex; gap: 6px; }
+.mock-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); display: block; }
+.mock-url { flex: 1; padding: var(--space-1) var(--space-3); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-pill); font-family: ui-monospace, Menlo, monospace; font-size: var(--text-xs); color: var(--navy-900); }
+.mock-body { padding: var(--space-5); display: grid; gap: var(--space-4); }
+.mock-row { display: flex; align-items: center; gap: var(--space-4); }
+.mock-title { font-family: "DM Sans", sans-serif; font-weight: 700; color: var(--navy-900); }
+.mock-btn { padding: var(--space-2) var(--space-4); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-size: var(--text-sm); color: var(--navy-900); background: var(--paper); }
+.mock-btn.hi { background: var(--blue-100); border-color: var(--blue-500); color: var(--navy-700); font-weight: 600; box-shadow: 0 0 0 4px rgba(47,95,208,0.12); }
+.mock-toggle { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--ink-soft); }
+.switch { width: 40px; height: 22px; border-radius: var(--radius-pill); background: var(--blue-500); position: relative; flex: none; }
+.switch::after { content: ""; position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.mock-card { display: flex; gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); align-items: center; }
+.mock-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); background: linear-gradient(140deg, var(--navy-700), var(--navy-900)); flex: none; }
+.mock-meta { font-size: var(--text-xs); color: var(--ink-soft); }
+.mock-folder { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); font-family: ui-monospace, Menlo, monospace; font-size: var(--text-xs); color: var(--navy-900); }
+.mock-pin { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.mock-pin span { width: 26px; height: 26px; border-radius: var(--radius-sm); border: 1px solid var(--line); display: grid; place-items: center; font-size: 13px; }
+.mock-pin span.on { border-color: var(--blue-500); background: var(--blue-100); }
+
+/* ------------------------------------------------------------ methods */
+.methods { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); margin-top: var(--space-10); }
+.method { min-width: 0; padding: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); }
+.method pre { max-width: 100%; }
+.method code { overflow-wrap: anywhere; }
+.method.best { border-color: var(--navy-900); box-shadow: 0 18px 44px rgba(0,34,90,0.10); }
+.method h3 { font-size: var(--text-lg); }
+.method p { margin-top: var(--space-3); font-size: var(--text-sm); color: var(--ink-soft); }
+.method .tag { display: inline-block; margin-bottom: var(--space-3); padding: 2px 10px; border-radius: var(--radius-pill); background: var(--surface-2); font-size: var(--text-xs); font-weight: 500; color: var(--ink-soft); }
+.method.best .tag { background: var(--navy-900); color: #fff; }
+
+/* --------------------------------------------------------------- faq */
+.qa { margin-top: var(--space-10); }
+.qa details { border-bottom: 1px solid var(--line); padding: var(--space-5) 0; }
+.qa summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: var(--space-5); font-family: "DM Sans", sans-serif; font-size: var(--text-lg); color: var(--navy-900); }
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary::after { content: "+"; width: 30px; height: 30px; flex: none; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); color: var(--navy-700); transition: transform 280ms var(--ease-out-quint); }
+.qa details[open] summary::after { transform: rotate(45deg); }
+.qa p { margin-top: var(--space-3); color: var(--ink-soft); }
+
+/* ------------------------------------------------------------ tutorial */
+.lessons { margin-top: var(--space-10); display: grid; gap: var(--space-4); }
+.lesson { display: grid; grid-template-columns: 132px 1fr; gap: var(--space-6); padding: var(--space-6); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.lesson-do { font-family: ui-monospace, Menlo, monospace; font-size: var(--text-xs); color: var(--blue-500); }
+.lesson h4 { font-size: var(--text-lg); }
+.lesson p { margin-top: var(--space-2); font-size: var(--text-sm); color: var(--ink-soft); }
+.lesson .why { margin-top: var(--space-3); padding-left: var(--space-4); border-left: 2px solid var(--blue-100); font-size: var(--text-sm); color: var(--ink-soft); }
+
+.foot { padding: var(--space-16) 0 var(--space-12); border-top: 1px solid var(--line); background: var(--surface); font-size: var(--text-sm); color: var(--ink-soft); }
+.foot .wrap { display: flex; flex-wrap: wrap; gap: var(--space-4); justify-content: space-between; }
+
+@media (max-width: 1024px) {
+  .methods { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .top nav { display: none; }
+  .step { grid-template-columns: 1fr; gap: var(--space-4); }
+  .lesson { grid-template-columns: 1fr; gap: var(--space-3); }
+}
+@media (max-width: 640px) {
+  .wrap { padding: 0 var(--space-4); }
+  .hero { padding: var(--space-12) 0 var(--space-10); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap wide">
+    <a class="brand" href="index.html"><span class="brand-mark"></span> PAVEL EDITOR</a>
+    <nav>
+      <a href="#video">Video</a>
+      <a href="#install">Install</a>
+      <a href="#other">Other ways</a>
+      <a href="#lessons">Tutorials</a>
+      <a href="#trouble">Troubleshooting</a>
+      <a href="index.html">Playground</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="pill">Not in the Chrome Web Store yet</span>
+    <h1>Install the editor in about ninety seconds.</h1>
+    <p>The extension is not published in the Chrome Web Store, so it installs the way developers install extensions: unzip a folder, turn on developer mode, load it. Nothing is compiled, nothing runs in the background, and you can delete it by dragging the folder to the bin.</p>
+    <div class="btns">
+      <a class="btn btn-primary" href="https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip">⬇ Download the zip</a>
+      <a class="btn btn-ghost" href="#video">Watch the narrated walkthrough</a>
+    </div>
+    <div class="note">
+      <span class="note-icon">⚠</span>
+      <div><b>Why developer mode?</b> Publishing to the Web Store needs a paid developer account and a review queue. Until that is done, "Load unpacked" is the official Chrome path for running an extension from a folder. It is the same mechanism every extension developer uses daily.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ video -->
+<section class="video" id="video">
+  <div class="wrap wide">
+    <span class="pill">The walkthrough</span>
+    <h2 style="margin-top: var(--space-3); font-size: clamp(26px, 3.2vw, var(--text-3xl))">Everything, narrated, in one pass.</h2>
+    <p style="margin-top: var(--space-4); color: var(--ink-soft); max-width: 68ch">Installing it, then every tool: selecting, moving, resizing, breakpoints, hover states, the audit, tokens, notes, the device frame, and how the report gets into a codebase.</p>
+
+    <div class="video-frame" style="margin-top: var(--space-8)">
+      <video controls preload="metadata" poster="video/poster.jpg" playsinline width="1440" height="900">
+        <source src="video/pavel-editor-walkthrough.mp4" type="video/mp4">
+        <track kind="captions" src="video/walkthrough.en.vtt" srclang="en" label="English" default>
+        <track kind="chapters" src="video/walkthrough.chapters.vtt" srclang="en" label="Chapters">
+        Your browser cannot play this video. <a href="video/pavel-editor-walkthrough.mp4">Download it instead.</a>
+      </video>
+    </div>
+    <div class="video-meta">
+      <span>Narrated, with subtitles and chapters · captions are burned in too, so it reads with the sound off</span>
+      <a href="video/pavel-editor-walkthrough.mp4" download>Download the file</a>
+    </div>
+
+    <div class="chapters" id="chapters"></div>
+  </div>
+</section>
+
+<!-- ========================================================== install -->
+<section class="section" id="install">
+  <div class="wrap">
+    <p class="eyebrow">The install</p>
+    <h2>Five steps, once.</h2>
+    <p>Chrome keeps the extension after this. You only repeat it when a new version ships, and the editor tells you when that happens.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div><span class="step-n">1</span></div>
+        <div>
+          <h3>Download and unzip</h3>
+          <p>Grab <code>pavel-editor-extension.zip</code> from the <a href="https://github.com/hodkovickybuh/pavel-editor/releases/latest">latest release</a>. Double-click it. You want the folder that comes out, called <code>extension</code>, and you want to leave it somewhere permanent: your Documents, not Downloads. Chrome loads it from that path every time it starts, so if the folder moves the extension breaks.</p>
+          <div class="step-figure">
+            <div class="mock">
+              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">Finder · Documents</span></div>
+              <div class="mock-body">
+                <div class="mock-folder">📁 extension/ — manifest.json · pavel-editor.js · background.js · icons/</div>
+                <p class="mock-meta">Keep the whole folder together. The manifest at its root is what Chrome reads.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div><span class="step-n">2</span></div>
+        <div>
+          <h3>Open the extensions page</h3>
+          <p>Type <code>chrome://extensions</code> into the address bar and press enter. You cannot get there by clicking a link, Chrome blocks that on purpose, so it has to be typed or pasted.</p>
+          <div class="step-figure">
+            <div class="mock">
+              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">chrome://extensions</span></div>
+              <div class="mock-body">
+                <div class="mock-row">
+                  <span class="mock-title">Extensions</span>
+                  <span class="mock-toggle">Developer mode <span class="switch"></span></span>
+                </div>
+                <p class="mock-meta">The developer mode switch sits at the top right of that page.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div><span class="step-n">3</span></div>
+        <div>
+          <h3>Turn on developer mode</h3>
+          <p>Top right of that page, one switch. Turning it on reveals three buttons on the left: <b>Load unpacked</b>, Pack extension, Update. Nothing else about your browser changes.</p>
+          <div class="step-figure">
+            <div class="mock">
+              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">chrome://extensions</span></div>
+              <div class="mock-body">
+                <div class="mock-row">
+                  <span class="mock-btn hi">Load unpacked</span>
+                  <span class="mock-btn">Pack extension</span>
+                  <span class="mock-btn">Update</span>
+                  <span class="mock-toggle">Developer mode <span class="switch"></span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div><span class="step-n">4</span></div>
+        <div>
+          <h3>Load unpacked, and pick the folder</h3>
+          <p>Click <b>Load unpacked</b> and select the <code>extension</code> folder itself, not a file inside it and not the zip. PAVEL EDITOR appears in the list straight away. If Chrome complains about the manifest, you have selected the wrong level: go one folder in or out until you see <code>manifest.json</code> sitting at the top.</p>
+          <div class="step-figure">
+            <div class="mock">
+              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">chrome://extensions</span></div>
+              <div class="mock-body">
+                <div class="mock-card">
+                  <span class="mock-icon"></span>
+                  <div>
+                    <div class="mock-title">PAVEL EDITOR</div>
+                    <div class="mock-meta">1.9.1 · A Figma-style visual editor for any live page</div>
+                  </div>
+                  <span class="mock-toggle"><span class="switch"></span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div><span class="step-n">5</span></div>
+        <div>
+          <h3>Pin it, then click it on any page</h3>
+          <p>Open the puzzle-piece icon in Chrome's toolbar and pin PAVEL EDITOR so it is always one click away. Then go to any page and click the icon: the panel appears in the top right. Click it again later and a hidden editor comes straight back.</p>
+          <div class="step-figure">
+            <div class="mock">
+              <div class="mock-bar">
+                <div class="mock-dots"><i></i><i></i><i></i></div>
+                <span class="mock-url">https://any-site-you-are-working-on.com</span>
+                <span class="mock-pin"><span>🧩</span><span class="on">✎</span></span>
+              </div>
+              <div class="mock-body">
+                <p class="mock-meta">The ✎ icon is the editor. One click arms it on the tab you are looking at, and nothing runs anywhere else.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="note-icon">✓</span>
+      <div><b>What it can and cannot see.</b> The extension asks for <code>activeTab</code> only, which means it gets access to a tab at the moment you click its icon, and to nothing before or after. It has no background page watching you, sends nothing anywhere, and stores your edits in your own browser's session storage. The source is <a href="https://github.com/hodkovickybuh/pavel-editor">public</a>.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ other -->
+<section class="section" id="other">
+  <div class="wrap wide">
+    <p class="eyebrow">Other ways to run it</p>
+    <h2>Three, and when each one is right.</h2>
+
+    <div class="methods">
+      <div class="method best">
+        <span class="tag">Best on any site</span>
+        <h3>The extension</h3>
+        <p>Works everywhere, including sites whose Content-Security-Policy blocks injected scripts: github.com, banks, most large products. Extension injection is exempt from the page's CSP, which is exactly why this exists.</p>
+      </div>
+      <div class="method">
+        <span class="tag">Best on your own project</span>
+        <h3>The bridge</h3>
+        <p>In the project folder run the command below, then load the script it prints. The panel's button becomes <b>APPLY TO CODE</b> and every report lands in <code>.pavel-editor/</code> in that project, where your coding assistant can read it without you pasting anything.</p>
+        <pre><code>npx pavel-editor-bridge</code></pre>
+      </div>
+      <div class="method">
+        <span class="tag">Quickest, own sites only</span>
+        <h3>The console line</h3>
+        <p>Paste this into DevTools on a page you control. On a strict site it fails with a CSP error, which is the site refusing, not the editor breaking.</p>
+        <pre><code>var s=document.createElement('script');
+s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.9.1/dist/pavel-editor.js';
+document.body.appendChild(s);</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================== lessons -->
+<section class="section" id="lessons">
+  <div class="wrap">
+    <p class="eyebrow">Tutorials</p>
+    <h2>Ten minutes, ten things.</h2>
+    <p>Do these in order on the <a href="index.html">playground page</a> and you will have used every part of the tool. Each one takes under a minute.</p>
+
+    <div class="lessons">
+      <div class="lesson">
+        <div class="lesson-do">click · drag</div>
+        <div>
+          <h4>1 · Move something</h4>
+          <p>Click the big headline. Drag it. The panel shows what changed, in mint.</p>
+          <p class="why">Why it matters: you are moving the real element in the real page, not a picture of it, so what you see is what the CSS will do.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">drag an edge</div>
+        <div>
+          <h4>2 · Resize a card</h4>
+          <p>Select a card in the three-card row, then drag its right or bottom edge. A live W×H chip follows the corner.</p>
+          <p class="why">If a max-width was holding the element back, the editor raises the ceiling with it instead of looking broken.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">drag sideways</div>
+        <div>
+          <h4>3 · Reorder a row</h4>
+          <p>Drag the middle card left or right. It changes place instead of floating, because its parent is a flex row.</p>
+          <p class="why">This is the auto-layout instinct from Figma, mapped onto the one thing a web page actually does with children in a row.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">state → hover</div>
+        <div>
+          <h4>4 · Design a hover</h4>
+          <p>Select the dark <b>See the collection</b> button, switch <b>state</b> to hover, change its fill. The value is shown at rest so you can judge it.</p>
+          <p class="why">A resting state is half a design. The report writes it as its own <code>:hover</code> rule rather than merging it into the normal one.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">▢ device</div>
+        <div>
+          <h4>5 · Edit the phone without touching desktop</h4>
+          <p>Press <b>device</b>, pick iPhone, change the headline size. Exit the frame: desktop is untouched.</p>
+          <p class="why">The editor reads the page's real breakpoints and scopes each edit to the band you made it in. Two sizes, two independent values.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">▷ use the page</div>
+        <div>
+          <h4>6 · Reach a state, then edit it</h4>
+          <p>Turn on <b>use the page</b>, flip the pricing toggle to Yearly, turn it off again, then restyle the price that appeared.</p>
+          <p class="why">Anything behind a click used to be uneditable. This is the button that fixed that.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">audit</div>
+        <div>
+          <h4>7 · Find the real problems</h4>
+          <p>Open the <b>audit</b> tab, press run checks. Four faults at the bottom of the playground are deliberate. Click ◎ to jump to each one.</p>
+          <p class="why">Contrast is measured on the colours actually painted, not the ones in the palette, which is where real pages fail.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">◇</div>
+        <div>
+          <h4>8 · Write a token, not a number</h4>
+          <p>Select a card, open <b>padding</b>, press ◇ and choose <code>--space-8</code>.</p>
+          <p class="why">Reporting <code>24px</code> makes a developer guess. Reporting <code>var(--space-6)</code> keeps the design system intact.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">N · ✎ mark</div>
+        <div>
+          <h4>9 · Say what you mean</h4>
+          <p>Select something and press <b>N</b> to pin a note. Or switch to <b>✎ mark</b> and circle an area freehand, then type the note.</p>
+          <p class="why">Half of what needs saying about a layout is intent, and intent has no CSS property.</p>
+        </div>
+      </div>
+      <div class="lesson">
+        <div class="lesson-do">COPY FOR AI</div>
+        <div>
+          <h4>10 · Hand it over</h4>
+          <p>Press the mint button. Paste into Claude, Cursor, or a message to whoever builds the site.</p>
+          <p class="why">The report names the file, the rule, the media query and the token, and warns when the site's own CSS would beat the change. That is the difference between a screenshot and a patch.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================== trouble -->
+<section class="section" id="trouble">
+  <div class="wrap">
+    <p class="eyebrow">Troubleshooting</p>
+    <h2>When it does not appear.</h2>
+
+    <div class="qa">
+      <details open>
+        <summary>I clicked the icon and nothing happened</summary>
+        <p>Two usual causes. Either you are on a page Chrome forbids extensions from touching (<code>chrome://</code> pages, the Web Store, a new tab page), so open a normal website and try again. Or the editor is already loaded and hidden: from 1.9.1 clicking the icon a second time brings a hidden panel back, so update if you are on an older build.</p>
+      </details>
+      <details>
+        <summary>Chrome says the manifest is missing or invalid</summary>
+        <p>You have selected the wrong folder level. The folder you pick must have <code>manifest.json</code> directly inside it. If you picked the zip, or the folder containing the folder, Chrome cannot see the manifest.</p>
+      </details>
+      <details>
+        <summary>The extension vanished after I restarted Chrome</summary>
+        <p>The folder moved or was deleted. Chrome loads an unpacked extension from its path every launch, so keep it somewhere permanent, then use Load unpacked once more.</p>
+      </details>
+      <details>
+        <summary>The console line gives a Content-Security-Policy error</summary>
+        <p>That site blocks outside scripts. Nothing is wrong with the editor and nothing you paste will change it. Use the extension there, which is exempt.</p>
+      </details>
+      <details>
+        <summary>My edits disappeared when the site re-rendered</summary>
+        <p>They should come back within half a second: the editor watches the page and re-applies its changes when a framework replaces the nodes. If they do not, the element it was attached to no longer exists in a recognisable place, and the change list keeps the value so you can re-apply it by hand.</p>
+      </details>
+      <details>
+        <summary>Typing in the site's own form does strange things</summary>
+        <p>Fixed in 1.9.1. Before that, single-letter shortcuts fired while you typed in a page field. Update, and the page's own inputs keep every key.</p>
+      </details>
+      <details>
+        <summary>Can I use it on a site I do not own?</summary>
+        <p>Yes. Everything happens in your browser and nothing is saved to the site. It is the same as opening DevTools and changing a value, with a better set of tools around it.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap wide">
+    <span>PAVEL EDITOR · MIT · <a href="https://github.com/hodkovickybuh/pavel-editor">source</a> · <a href="https://github.com/hodkovickybuh/pavel-editor/blob/main/GUIDE.md">the designer's guide</a></span>
+    <span><a href="index.html">Back to the playground</a></span>
+  </div>
+</footer>
+
+<script>
+// Chapters are generated from one list, so the video and this page cannot drift
+var CHAPTERS = [
+  ["0:00", "What this is", "one script, any live page"],
+  ["0:18", "Installing it", "developer mode, load unpacked"],
+  ["0:46", "Select and move", "click, drag, undo"],
+  ["1:04", "Resize and reorder", "edges, and flex rows"],
+  ["1:22", "Breakpoints", "desktop, tablet and phone, separately"],
+  ["1:45", "States", "hover, focus, active"],
+  ["2:01", "The audit", "contrast, targets, alt, overflow"],
+  ["2:21", "Tokens", "var(--space-6), not 24px"],
+  ["2:36", "Notes and marks", "saying what you mean"],
+  ["2:49", "Handing it over", "the report, and the bridge"]
+];
+var box = document.getElementById('chapters');
+var video = document.querySelector('video');
+CHAPTERS.forEach(function (c) {
+  var el = document.createElement('button');
+  el.className = 'chapter';
+  el.type = 'button';
+  el.style.cssText = 'text-align:left;cursor:pointer;font:inherit';
+  el.innerHTML = '<time>' + c[0] + '</time><span><b>' + c[1] + '</b>' + c[2] + '</span>';
+  el.addEventListener('click', function () {
+    if (!video) return;
+    var parts = c[0].split(':');
+    video.currentTime = Number(parts[0]) * 60 + Number(parts[1]);
+    video.play();
+    video.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+  box.appendChild(el);
+});
+</script>
+</body>
+</html>

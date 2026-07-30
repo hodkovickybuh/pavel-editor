@@ -10,8 +10,9 @@ Then press one button and hand the whole session to your AI assistant as a repor
 <br>
 
 [![Download the Chrome extension](https://img.shields.io/badge/%E2%AC%87%EF%B8%8E%20%20Download%20the%20Chrome%20extension-B2D5E5?style=for-the-badge&labelColor=23212C)](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip)
-[![Try the live demo](https://img.shields.io/badge/%E2%96%B6%20%20Try%20the%20live%20demo-99E1D9?style=for-the-badge&labelColor=23212C)](https://hodkovickybuh.github.io/pavel-editor/demo/)
-[![Read the guide](https://img.shields.io/badge/%F0%9F%93%96%20%20Read%20the%20guide-8a86a8?style=for-the-badge&labelColor=23212C)](GUIDE.md)
+[![Try the playground](https://img.shields.io/badge/%E2%96%B6%20%20Try%20the%20playground-99E1D9?style=for-the-badge&labelColor=23212C)](https://hodkovickybuh.github.io/pavel-editor/demo/)
+[![Watch the walkthrough](https://img.shields.io/badge/%F0%9F%8E%A5%20%20Watch%20the%20walkthrough-2f5fd0?style=for-the-badge&labelColor=23212C)](https://hodkovickybuh.github.io/pavel-editor/demo/install.html#video)
+[![Install guide](https://img.shields.io/badge/%F0%9F%93%96%20%20Install%20guide-8a86a8?style=for-the-badge&labelColor=23212C)](https://hodkovickybuh.github.io/pavel-editor/demo/install.html)
 
 [![release](https://img.shields.io/github/v/release/hodkovickybuh/pavel-editor?style=flat-square&color=99E1D9&labelColor=23212C)](https://github.com/hodkovickybuh/pavel-editor/releases)
 [![downloads](https://img.shields.io/github/downloads/hodkovickybuh/pavel-editor/total?style=flat-square&color=B2D5E5&labelColor=23212C)](https://github.com/hodkovickybuh/pavel-editor/releases)
@@ -19,19 +20,21 @@ Then press one button and hand the whole session to your AI assistant as a repor
 
 <br>
 
-![PAVEL EDITOR](assets/editor.png)
+![PAVEL EDITOR editing the playground page](assets/playground.png)
 
 </div>
 
 ## Get it
 
-**The Chrome extension is the way.** It works on every site, including the ones that block scripts (github.com, banks, most big products). [**⬇ Download the zip**](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip) (always the newest version), unzip it, then:
+**The Chrome extension is the way.** It works on every site, including the ones that block injected scripts (github.com, banks, most big products). It is **not in the Chrome Web Store yet**, so it installs the way developers install extensions. [**⬇ Download the zip**](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip) (always the newest version), unzip it, then:
 
 ```
 1. chrome://extensions → turn on Developer mode (top right)
-2. Load unpacked → pick the unzipped folder
+2. Load unpacked → pick the unzipped `extension` folder
 3. Pin PAVEL EDITOR · click its icon on any page
 ```
+
+> **[The full install guide](https://hodkovickybuh.github.io/pavel-editor/demo/install.html)** walks through all five steps with illustrations, a **narrated video**, ten short tutorials and a troubleshooting list. Keep the unzipped folder somewhere permanent: Chrome loads it from that path on every launch.
 
 ![the extension editing github.com itself](assets/extension-on-github.png)
 
@@ -92,8 +95,13 @@ var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkov
 | **Bridge** | run `npx pavel-editor-bridge` in the project and the button becomes **APPLY TO CODE**: the report lands in `.pavel-editor/` and prints in that terminal, where your agent is already looking |
 | **Handoff** | save the whole session as a file; anyone with the codebase loads it and sees the identical page, notes and marks included |
 
+![the install guide](assets/install-guide.png)
 ![multi-select](assets/multiselect.png)
 ![resize](assets/resize.png)
+
+## The playground
+
+[**hodkovickybuh.github.io/pavel-editor/demo**](https://hodkovickybuh.github.io/pavel-editor/demo/) is a full page built to be edited: real breakpoints at 640, 768, 1024 and 1280, named design tokens, a marquee, entrance and scroll animations, hover states, a working pricing toggle and slider, a form, images to swap, and a marked playground of four deliberate accessibility faults for the audit to find. The editor is already running on it.
 
 ## The report
 

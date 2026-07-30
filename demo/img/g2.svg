@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Abstract interior: a shaft of light across a plaster wall">
+<defs>
+<linearGradient id="w2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef1f7"/></linearGradient>
+<linearGradient id="beam" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+<linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e4e9f3"/><stop offset="1" stop-color="#d8dfee"/></linearGradient>
+</defs>
+<rect width="600" height="600" fill="url(#w2)"/>
+<rect y="430" width="600" height="170" fill="url(#floor)"/>
+<line x1="0" y1="430" x2="600" y2="430" stroke="#00225a" stroke-opacity="0.16"/>
+<polygon points="120,0 330,0 210,430 60,430" fill="url(#beam)"/>
+<polygon points="330,0 372,0 258,430 210,430" fill="#ffffff" opacity="0.55"/>
+<rect x="470" y="130" width="2" height="300" fill="#00225a" opacity="0.2"/>
+<rect x="60" y="470" width="220" height="2" fill="#00225a" opacity="0.12"/>
+<circle cx="512" cy="470" r="26" fill="#00225a" opacity="0.9"/>
+</svg>

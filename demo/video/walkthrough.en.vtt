@@ -1,0 +1,103 @@
+WEBVTT
+
+00:00:02.062 --> 00:00:07.034
+This is PAVEL EDITOR. One script that turns any live web page into something you can design in, directly.
+
+00:00:07.034 --> 00:00:12.006
+No build step, no framework, and nothing it does reaches your real code until you decide to apply it.
+
+00:00:12.006 --> 00:00:16.978
+Here it is, running on a playground page built for exactly this.
+
+00:00:20.229 --> 00:00:25.151
+It is not in the Chrome Web Store yet, so it installs the way developers install extensions.
+
+00:00:25.151 --> 00:00:30.072
+Download the zip from the releases page and unzip it, and keep that folder somewhere permanent.
+
+00:00:30.072 --> 00:00:34.994
+Type chrome, colon, slash, slash, extensions into the address bar. Turn on developer mode at the top right.
+
+00:00:34.994 --> 00:00:39.915
+Click load unpacked and pick the extension folder itself.
+
+00:00:39.915 --> 00:00:44.836
+Pin the icon, and from then on one click arms the editor on whatever tab you are looking at.
+
+00:00:48.259 --> 00:00:51.864
+Click anything to select it.
+
+00:00:51.864 --> 00:00:55.469
+The panel names what you picked, says whether it is centred, and shows every value you can change.
+
+00:00:55.469 --> 00:00:59.074
+Drag it and it moves. Solo mode moves only that element, so nothing below it shifts.
+
+00:00:59.074 --> 00:01:02.679
+Command Z undoes the whole gesture as one step.
+
+00:01:05.918 --> 00:01:10.829
+Drag the right or bottom edge to resize, with a live width by height readout.
+
+00:01:10.829 --> 00:01:15.740
+Inside a row, dragging a card sideways reorders it instead.
+
+00:01:15.740 --> 00:01:20.651
+That is the auto layout instinct from Figma, mapped onto what a web page actually does with children in a row.
+
+00:01:23.898 --> 00:01:28.776
+This is the part that makes it truthful.
+
+00:01:28.776 --> 00:01:33.654
+The chip at the top of the panel says which breakpoint band you are editing, and those bands are read from the page's own media queries.
+
+00:01:33.654 --> 00:01:38.533
+Open the device frame, edit at three hundred and ninety pixels, and the phone gets its own value while the desktop keeps the one you gave it.
+
+00:01:38.533 --> 00:01:43.411
+Two independent decisions, reported into two different media queries.
+
+00:01:46.742 --> 00:01:53.090
+A resting state is only half a design. Switch state to hover and change a colour.
+
+00:01:53.090 --> 00:01:59.437
+The value is mirrored onto the element at rest so you can see it while you work, and it is reported as its own hover rule rather than folded into the normal one.
+
+00:02:02.642 --> 00:02:08.171
+The audit tab measures the page as it is actually painted. Contrast against the real background behind the text.
+
+00:02:08.171 --> 00:02:13.700
+Tap targets under forty four pixels. Images with no alt text, sideways overflow, lines too long to read back.
+
+00:02:13.700 --> 00:02:19.229
+Click the button next to a finding and it selects that element for you.
+
+00:02:22.508 --> 00:02:26.600
+Numbers are where design systems go to die.
+
+00:02:26.600 --> 00:02:30.692
+Press the diamond next to any value and write the site's own token instead.
+
+00:02:30.692 --> 00:02:34.785
+The report then says use var, space six, rather than use twenty four pixels.
+
+00:02:37.986 --> 00:02:43.132
+Press N to pin a note to an element, or switch to mark and circle something freehand.
+
+00:02:43.132 --> 00:02:48.278
+Intent has no CSS property, so it travels in the report as an instruction next to the values.
+
+00:02:51.443 --> 00:02:55.790
+When you are done, one button.
+
+00:02:55.790 --> 00:03:00.137
+The report names the file, the rule, the media query and the token, and warns you when the site's own CSS would beat your change.
+
+00:03:00.137 --> 00:03:04.484
+Paste it to Claude, or to whoever builds the site.
+
+00:03:04.484 --> 00:03:08.831
+On a local project, run the bridge and the same button sends it straight into the codebase. That is the whole loop.
+
+00:03:08.831 --> 00:03:13.177
+Design on the real page, and hand over something that can actually be applied.

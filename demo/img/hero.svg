@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-label="A pale arch with a slim navy lamp standing under it">
+  <defs>
+    <linearGradient id="sky" x1="0.1" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.5" stop-color="#f2f5fa"/>
+      <stop offset="1" stop-color="#e3eaf6"/>
+    </linearGradient>
+    <linearGradient id="navy" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="#1c4699"/>
+      <stop offset="0.45" stop-color="#0b2a6b"/>
+      <stop offset="1" stop-color="#00194a"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="#f4f7fc"/>
+      <stop offset="1" stop-color="#dfe6f3"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e7ecf6"/>
+      <stop offset="1" stop-color="#d6dfef"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.62" cy="0.42" r="0.42">
+      <stop offset="0" stop-color="#ffe9c2" stop-opacity="0.85"/>
+      <stop offset="0.45" stop-color="#ffe9c2" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffe9c2" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cool" cx="0.2" cy="0.15" r="0.6">
+      <stop offset="0" stop-color="#2f5fd0" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#2f5fd0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <clipPath id="frame"><rect width="1200" height="900"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#frame)">
+    <rect width="1200" height="900" fill="url(#sky)"/>
+    <rect width="1200" height="900" fill="url(#cool)"/>
+
+    <!-- the arch, a deep niche -->
+    <path d="M250 780 L250 400 A350 350 0 0 1 950 400 L950 780 Z" fill="url(#shade)"/>
+    <path d="M250 780 L250 400 A350 350 0 0 1 950 400 L950 780 Z" fill="none" stroke="#00225a" stroke-opacity="0.16" stroke-width="2"/>
+    <path d="M330 780 L330 415 A270 270 0 0 1 870 415 L870 780 Z" fill="#ffffff" opacity="0.85"/>
+
+    <!-- the lamp's own light, thrown up the back wall -->
+    <ellipse cx="600" cy="430" rx="230" ry="230" fill="url(#glow)"/>
+
+    <!-- floor -->
+    <rect x="0" y="780" width="1200" height="120" fill="url(#floor)"/>
+    <line x1="0" y1="780" x2="1200" y2="780" stroke="#00225a" stroke-opacity="0.28" stroke-width="2"/>
+
+    <!-- cast shadow -->
+    <ellipse cx="640" cy="782" rx="210" ry="16" fill="#00225a" opacity="0.16" filter="url(#soft)"/>
+
+    <!-- the object: a slim column lamp with a bright shade -->
+    <rect x="470" y="740" width="260" height="14" rx="7" fill="#00225a" opacity="0.9"/>
+    <rect x="586" y="330" width="28" height="415" rx="14" fill="url(#navy)"/>
+    <path d="M498 330 L702 330 L668 214 L532 214 Z" fill="url(#navy)"/>
+    <path d="M498 330 L702 330 L668 214 L532 214 Z" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="2"/>
+    <ellipse cx="600" cy="330" rx="102" ry="12" fill="#fff5e2"/>
+    <ellipse cx="600" cy="330" rx="102" ry="12" fill="none" stroke="#00225a" stroke-opacity="0.12"/>
+    <rect x="574" y="392" width="52" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+
+    <!-- a companion form, so the still life has two masses -->
+    <path d="M770 780 L770 690 A46 46 0 0 1 862 690 L862 780 Z" fill="#ffffff"/>
+    <path d="M770 780 L770 690 A46 46 0 0 1 862 690 L862 780 Z" fill="none" stroke="#00225a" stroke-opacity="0.2" stroke-width="2"/>
+    <path d="M786 730 L846 730" stroke="#00225a" stroke-opacity="0.18" stroke-width="2"/>
+
+    <!-- the tool's own vocabulary: one measured span -->
+    <g stroke="#2f5fd0" stroke-opacity="0.5" stroke-width="1.5">
+      <line x1="1030" y1="214" x2="1030" y2="780"/>
+      <line x1="1018" y1="214" x2="1042" y2="214"/>
+      <line x1="1018" y1="780" x2="1042" y2="780"/>
+    </g>
+    <rect x="1002" y="470" width="56" height="26" rx="13" fill="#2f5fd0" opacity="0.12"/>
+    <text x="1030" y="488" font-family="ui-monospace, Menlo, monospace" font-size="15" fill="#1c4699" text-anchor="middle" opacity="0.85">566</text>
+
+    <rect width="1200" height="900" filter="url(#grain)" opacity="0.045"/>
+  </g>
+</svg>

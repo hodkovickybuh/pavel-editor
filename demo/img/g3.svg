@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Abstract macro: folded paper with one navy edge">
+<defs>
+<linearGradient id="f1" x1="0" y1="0" x2="1" y2="0.3"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e9edf5"/></linearGradient>
+<linearGradient id="f2" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#f3f6fb"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+</defs>
+<rect width="600" height="600" fill="#f7f9fc"/>
+<polygon points="0,360 300,140 600,300 600,600 0,600" fill="url(#f1)"/>
+<polygon points="0,360 300,140 300,600 0,600" fill="url(#f2)"/>
+<polyline points="0,360 300,140 600,300" fill="none" stroke="#00225a" stroke-opacity="0.35" stroke-width="2"/>
+<polyline points="300,140 300,600" fill="none" stroke="#00225a" stroke-opacity="0.12"/>
+<polygon points="300,140 600,300 600,330 300,170" fill="#00225a"/>
+<polygon points="0,150 300,-60 300,20 0,230" fill="#ffffff" opacity="0.6"/>
+</svg>

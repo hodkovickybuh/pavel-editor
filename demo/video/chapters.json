@@ -1,0 +1,52 @@
+[
+  {
+    "t": 0,
+    "title": "What this is",
+    "sub": "one script, any live page"
+  },
+  {
+    "t": 18,
+    "title": "Installing it",
+    "sub": "developer mode, load unpacked"
+  },
+  {
+    "t": 46,
+    "title": "Select and move",
+    "sub": "click, drag, undo"
+  },
+  {
+    "t": 64,
+    "title": "Resize and reorder",
+    "sub": "edges, and flex rows"
+  },
+  {
+    "t": 82,
+    "title": "Breakpoints",
+    "sub": "desktop, tablet and phone, separately"
+  },
+  {
+    "t": 105,
+    "title": "States",
+    "sub": "hover, focus, active"
+  },
+  {
+    "t": 121,
+    "title": "The audit",
+    "sub": "contrast, targets, alt, overflow"
+  },
+  {
+    "t": 141,
+    "title": "Tokens",
+    "sub": "var(--space-6), not 24px"
+  },
+  {
+    "t": 156,
+    "title": "Notes and marks",
+    "sub": "saying what you mean"
+  },
+  {
+    "t": 169,
+    "title": "Handing it over",
+    "sub": "the report, and the bridge"
+  }
+]
