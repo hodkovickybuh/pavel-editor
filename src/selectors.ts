@@ -488,10 +488,16 @@ export function winningRuleFor(el: Element, prop: string): { selector: string; f
   return res;
 }
 
-/** the wrapper whose children are the page's top-level sections */
+/**
+ * The wrapper whose children are the page's top-level sections. Most app UIs,
+ * dashboards and Tailwind pages have no <section> at all, and returning null
+ * there left the layers tree reading "no page root found" and sections mode
+ * inert on the majority of real sites. The body's own children ARE the sections
+ * of such a page, so fall back to it.
+ */
 export function sectionWrap(): HTMLElement | null {
   const first = edDoc().querySelector("body section");
-  return (first?.parentElement as HTMLElement | null) ?? null;
+  return (first?.parentElement as HTMLElement | null) ?? edDoc().body ?? null;
 }
 
 /**

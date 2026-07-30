@@ -824,6 +824,12 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         return;
       }
 
+      // focus sits in one of the PAGE's own fields (a form on the site, a search
+      // box, someone else's rich-text editor). The site owns every key there.
+      // Without this, typing "s" toggled the spacing overlay mid-word and
+      // Backspace HID the selected element while you were writing a sentence.
+      if (!editingText.current && t?.matches?.("input, select, textarea, [contenteditable], [contenteditable] *")) return;
+
       if (editingText.current) {
         if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey)) {
           e.preventDefault();

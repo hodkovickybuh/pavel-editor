@@ -584,7 +584,14 @@ function Layers({
     );
   };
 
-  return <div style={{ padding: "6px 0" }}>{[...root.children].filter((c): c is HTMLElement => c.nodeType === 1).map((c) => render(c, 0))}</div>;
+  // the editor's own host node is a body child when the tree is rooted at body
+  return (
+    <div style={{ padding: "6px 0" }}>
+      {[...root.children]
+        .filter((c): c is HTMLElement => c.nodeType === 1 && !c.hasAttribute("data-editmode-ui"))
+        .map((c) => render(c, 0))}
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ panel */
