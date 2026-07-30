@@ -24,6 +24,24 @@ Then press one button and hand the whole session to your AI assistant as a repor
 
 </div>
 
+## Watch it work · 3 minutes, narrated
+
+<video src="https://github.com/hodkovickybuh/pavel-editor/raw/main/demo/video/pavel-editor-walkthrough.mp4" poster="assets/video-poster.jpg" controls muted playsinline width="100%"></video>
+
+<a href="https://hodkovickybuh.github.io/pavel-editor/demo/install.html#video">
+  <img src="assets/highlight.gif" alt="PAVEL EDITOR: selecting, dragging and inspecting a live page" width="100%">
+</a>
+
+<sub>If the player above does not appear in your reader, **[watch it on the guide page](https://hodkovickybuh.github.io/pavel-editor/demo/install.html#video)** (subtitles and clickable chapters) or **[download the MP4](https://hodkovickybuh.github.io/pavel-editor/demo/video/pavel-editor-walkthrough.mp4)**.</sub>
+
+| | | | |
+|---|---|---|---|
+| **0:00** What this is | **0:18** Installing it | **0:46** Select and move | **1:04** Resize and reorder |
+| **1:22** Breakpoints | **1:45** States | **2:01** The audit | **2:21** Tokens |
+| **2:36** Notes and marks | **2:49** Handing it over | | |
+
+
+
 ## Get it
 
 **The Chrome extension is the way.** It works on every site, including the ones that block injected scripts (github.com, banks, most big products). It is **not in the Chrome Web Store yet**, so it installs the way developers install extensions. [**⬇ Download the zip**](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip) (always the newest version), unzip it, then:
