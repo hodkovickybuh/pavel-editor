@@ -13,25 +13,78 @@ import {
   PROPS,
   STYLE_PROPS,
   type NumProp,
+  breakpointEdges,
+  cascadeRival,
   describe,
   domPath,
   fromDomPath,
+  numericTokens,
   readProp,
   readStyle,
+  resetBreakpoints,
   round,
   runtimeRef,
+  tokenFor,
   winningRuleFor,
 } from "./selectors";
 import { edWin, isElem } from "./context";
+import { looksTailwind, tailwindFor } from "./tailwind";
 
 export type ChangeProp = NumProp | string;
 
-/** which breakpoint bucket an edit belongs to: made at <=900px, it is a phone/
-    tablet decision and must never touch desktop, and vice versa */
-export type Bucket = "d" | "m";
-export const bucketOf = (): Bucket => (edWin().innerWidth <= 900 ? "m" : "d");
-export const changeKey = (path: string, prop: string, bucket?: Bucket) =>
-  bucket ? `${path}|${prop}|${bucket}` : `${path}|${prop}`;
+/**
+ * Which breakpoint band an edit belongs to. Bands come from the page's OWN media
+ * queries (see breakpointEdges) and are written `lo-hi`, or `lo-` for the top
+ * band. A value chosen at 768px and a value chosen at 390px are now different
+ * identities, editable independently, reported into different media queries.
+ * "d" and "m" are the legacy two-bucket ids and still resolve, so a session
+ * saved by an older build keeps working.
+ */
+export type Bucket = string;
+
+export const bucketOf = (): Bucket => {
+  const w = edWin().innerWidth;
+  let lo = 0;
+  for (const edge of breakpointEdges()) {
+    if (w <= edge) return `${lo}-${edge}`;
+    lo = edge + 1;
+  }
+  return `${lo}-`;
+};
+
+/** the media query a band means, which is exactly what the report has to say */
+export const mediaFor = (b: Bucket): string => {
+  if (b === "d") return "(min-width: 901px)";
+  if (b === "m") return "(max-width: 900px)";
+  const [lo, hi] = b.split("-");
+  const parts: string[] = [];
+  if (Number(lo) > 0) parts.push(`(min-width: ${lo}px)`);
+  if (hi) parts.push(`(max-width: ${hi}px)`);
+  return parts.join(" and ") || "all";
+};
+
+/** how a band reads to a person */
+export const bucketLabel = (b: Bucket): string => {
+  if (b === "d") return "desktop";
+  if (b === "m") return "narrow";
+  const [lo, hi] = b.split("-");
+  if (!hi) return `${lo}px and wider`;
+  return Number(lo) === 0 ? `up to ${hi}px` : `${lo}–${hi}px`;
+};
+
+/** widest band first, so the report reads base-rule-then-overrides */
+export const bucketOrder = (b: Bucket): number => {
+  if (b === "d") return -901;
+  if (b === "m") return -900;
+  const [lo] = b.split("-");
+  return -Number(lo);
+};
+
+/** the pseudo-state an edit belongs to; "" is the resting state */
+export type EditState = "" | "hover" | "focus-visible" | "active";
+
+export const changeKey = (path: string, prop: string, bucket?: Bucket, state?: EditState) =>
+  `${path}|${prop}${bucket ? `|${bucket}` : ""}${state ? `|${state}` : ""}`;
 
 /** where to write a property, whichever of the two tables declares it */
 function cssKeyOf(prop: string): string | null {
@@ -67,6 +120,13 @@ export type Change = {
   valueHtml?: string;
   /** breakpoint bucket for style props; content changes (text/image/note) have none */
   bucket?: Bucket;
+  /** the pseudo-state this value belongs to; absent means the resting state */
+  state?: EditState;
+  /** a more specific rule that already sets this property: the applied CSS will
+      LOSE to it even though the preview won, so the report has to say so */
+  rival?: string;
+  /** a design token this value already equals, named so the applier writes it */
+  tok?: string;
 };
 
 /**
@@ -135,6 +195,39 @@ class EditStore {
   /** the persistence key for an element, exposed so a drag can snapshot entries */
   pathOf = (el: HTMLElement) => domPath(el);
 
+  /**
+   * WHICH STATE is being edited. The resting state is only half a design; a
+   * hover value is a design decision that no live-page editor could express
+   * before, because you cannot hover an element and drag a slider at once.
+   * `force` mirrors the state's values onto the resting element so it can be
+   * SEEN while it is edited; it is preview-only and never recorded.
+   */
+  state: EditState = "";
+  force = true;
+  setState(s: EditState) {
+    this.state = s;
+    this.syncSheet();
+    this.dirty = true;
+    this.listeners.forEach((fn) => fn());
+  }
+
+  /** the change key for the CURRENT band and state */
+  keyOf = (path: string, prop: string) => changeKey(path, prop, bucketOf(), this.state);
+
+  /** numeric design tokens, cached per realm: the scan walks every stylesheet */
+  private tokCache: { doc: Document; list: Array<{ name: string; px: number }> } | null = null;
+  tokens() {
+    const doc = edWin().document;
+    if (this.tokCache?.doc !== doc) this.tokCache = { doc, list: numericTokens() };
+    return this.tokCache.list;
+  }
+
+  /** forget everything cached about the page: new realm, or a fresh stylesheet */
+  invalidate() {
+    this.tokCache = null;
+    resetBreakpoints();
+  }
+
   /** true while the page is showing ORIGINALS with all edits suspended */
   previewOff = false;
   /** runtime-only object URLs for dropped images, keyed like changes */
@@ -152,7 +245,9 @@ class EditStore {
    */
   syncSheet() {
     const doc = edWin().document;
-    const buckets: Record<Bucket, Map<number, string[]>> = { d: new Map(), m: new Map() };
+    /** `${bucket}|${state}|${id}` -> declarations */
+    const decls = new Map<string, string[]>();
+    const push = (k: string, decl: string) => decls.set(k, [...(decls.get(k) ?? []), decl]);
     for (const c of this.changes.values()) {
       if (!c.bucket) continue;
       if (c.prop === "text" || c.prop === "note" || c.prop === "image" || c.prop === "order") continue;
@@ -164,16 +259,23 @@ class EditStore {
         this.pathIds.set(c.path, id);
       }
       if (el.getAttribute("data-pe-id") !== String(id)) el.setAttribute("data-pe-id", String(id));
-      const list = buckets[c.bucket].get(id) ?? [];
-      list.push(`${c.prop}: ${c.value} !important;`);
-      buckets[c.bucket].set(id, list);
+      const decl = `${c.prop}: ${c.value} !important;`;
+      push(`${c.bucket}|${c.state ?? ""}|${id}`, decl);
+      // the force mirror: while a state is being edited, show it at rest too.
+      // Appended after the real resting rules, so it wins the preview and
+      // disappears the moment the state selector goes back to rest.
+      if (c.state && this.force && this.state === c.state) push(`${c.bucket}||${id}`, decl);
     }
-    const block = (m: Map<number, string[]>) =>
-      [...m.entries()].map(([id, decls]) => `[data-pe-id="${id}"] { ${decls.join(" ")} }`).join("\n");
-    const css = [
-      buckets.d.size ? `@media (min-width: 901px) {\n${block(buckets.d)}\n}` : "",
-      buckets.m.size ? `@media (max-width: 900px) {\n${block(buckets.m)}\n}` : "",
-    ].join("\n");
+    const byBucket = new Map<Bucket, string[]>();
+    for (const [k, list] of decls) {
+      const [bucket, state, id] = k.split("|");
+      const rule = `[data-pe-id="${id}"]${state ? `:${state}` : ""} { ${list.join(" ")} }`;
+      byBucket.set(bucket, [...(byBucket.get(bucket) ?? []), rule]);
+    }
+    const css = [...byBucket.entries()]
+      .sort((a, b) => bucketOrder(a[0]) - bucketOrder(b[0]))
+      .map(([b, rules]) => `@media ${mediaFor(b)} {\n${rules.join("\n")}\n}`)
+      .join("\n");
     let tag = doc.getElementById("pavel-editor-preview") as HTMLStyleElement | null;
     if (!tag) {
       tag = doc.createElement("style");
@@ -242,6 +344,37 @@ class EditStore {
     }
   }
 
+  /**
+   * HANDOFF: the whole session as a file. A designer edits on their machine and
+   * sends this; whoever has the codebase drops it back in and sees exactly the
+   * same page, with the notes and the marks, before a line of CSS is written.
+   */
+  exportSession(): string {
+    return JSON.stringify(
+      {
+        tool: "pavel-editor",
+        version: 1,
+        url: location.href,
+        viewport: { w: edWin().innerWidth, h: edWin().innerHeight },
+        changes: [...this.changes.values()].filter((c) => c.prop !== "image"),
+      },
+      null,
+      2,
+    );
+  }
+
+  importSession(text: string): number {
+    let parsed: { changes?: Change[] };
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return 0;
+    }
+    if (!Array.isArray(parsed.changes)) return 0;
+    this.applyChangeSet(parsed.changes);
+    return parsed.changes.length;
+  }
+
   loadVariant(slot: "A" | "B") {
     let saved: Change[];
     try {
@@ -251,6 +384,12 @@ class EditStore {
     } catch {
       return false;
     }
+    this.applyChangeSet(saved);
+    return true;
+  }
+
+  /** replace the whole change-set as ONE undo step: variants and imports both */
+  private applyChangeSet(saved: Change[]) {
     this.ensureLive();
     const prev = new Map(this.changes);
     // text back to originals; styles are wholesale-recompiled by the sheet
@@ -320,7 +459,8 @@ class EditStore {
     const v = Math.min(max, Math.max(spec.min, round(value, spec.step)));
     const path = domPath(el);
     const bucket = bucketOf();
-    const key = changeKey(path, prop, bucket);
+    const state = this.state;
+    const key = changeKey(path, prop, bucket, state);
     const before = this.changes.get(key);
     const base = before ? before.base : `${readProp(el, prop)}${spec.unit}`;
 
@@ -336,6 +476,9 @@ class EditStore {
       value: `${v}${spec.unit}`,
       vw: edWin().innerWidth,
       bucket,
+      state: state || undefined,
+      rival: cascadeRival(el, prop, d.selector) ?? undefined,
+      tok: tokenFor(prop, v, this.tokens()) ?? undefined,
       comp: opts?.comp,
       ...runtimeRef(el),
     };
@@ -363,7 +506,8 @@ class EditStore {
     if (!css) return;
     const path = domPath(el);
     const bucket = bucketOf();
-    const key = changeKey(path, prop, bucket);
+    const state = this.state;
+    const key = changeKey(path, prop, bucket, state);
     const before = this.changes.get(key);
     // numeric PROPS can also arrive here carrying a raw unit ("10vw"); their
     // base must come off the computed style, which readStyle does not cover
@@ -373,7 +517,12 @@ class EditStore {
         ? readStyle(el, prop)
         : `${readProp(el, prop as NumProp)}${PROPS[prop as NumProp]?.unit ?? ""}`;
     const d = describeFor(el, prop);
-    const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, bucket, ...runtimeRef(el) };
+    const next: Change = {
+      key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value,
+      vw: edWin().innerWidth, bucket, state: state || undefined,
+      rival: cascadeRival(el, prop, d.selector) ?? undefined,
+      ...runtimeRef(el),
+    };
 
     if (value === base) this.changes.delete(key);
     else this.changes.set(key, next);
@@ -455,7 +604,8 @@ class EditStore {
     const v = Math.min(max, Math.max(spec.min, round(value, spec.step)));
     const path = domPath(el);
     const bucket = bucketOf();
-    const key = changeKey(path, prop, bucket);
+    const state = this.state;
+    const key = changeKey(path, prop, bucket, state);
     const before = this.changes.get(key);
     const base = before ? before.base : `${readProp(el, prop)}${spec.unit}`;
     const d = describeFor(el, prop);
@@ -463,7 +613,11 @@ class EditStore {
     if (value2 === base) this.changes.delete(key);
     else
       this.changes.set(key, {
-        key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value: value2, vw: edWin().innerWidth, bucket, ...runtimeRef(el),
+        key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value: value2,
+        vw: edWin().innerWidth, bucket, state: state || undefined,
+        rival: cascadeRival(el, prop, d.selector) ?? undefined,
+        tok: tokenFor(prop, v, this.tokens()) ?? undefined,
+        ...runtimeRef(el),
       });
     this.syncSheet();
     this.dirty = true;
@@ -476,7 +630,8 @@ class EditStore {
     if (!cssKeyOf(prop)) return;
     const path = domPath(el);
     const bucket = bucketOf();
-    const key = changeKey(path, prop, bucket);
+    const state = this.state;
+    const key = changeKey(path, prop, bucket, state);
     const before = this.changes.get(key);
     const base = before
       ? before.base
@@ -485,7 +640,13 @@ class EditStore {
         : `${readProp(el, prop as NumProp)}${PROPS[prop as NumProp]?.unit ?? ""}`;
     const d = describeFor(el, prop);
     if (value === base) this.changes.delete(key);
-    else this.changes.set(key, { key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value, vw: edWin().innerWidth, bucket, ...runtimeRef(el) });
+    else
+      this.changes.set(key, {
+        key, path, label: d.label, file: d.file, selector: d.selector, prop, base, value,
+        vw: edWin().innerWidth, bucket, state: state || undefined,
+        rival: cascadeRival(el, prop, d.selector) ?? undefined,
+        ...runtimeRef(el),
+      });
     this.syncSheet();
     this.dirty = true;
     this.listeners.forEach((fn) => fn());
@@ -657,14 +818,18 @@ class EditStore {
     const notes = all.filter((c) => c.prop === "note");
     const orders = all.filter((c) => c.prop === "order");
 
+    const tw = looksTailwind();
     const lines = [
       `PAVEL EDITOR REPORT   ${location.pathname}   viewport ${edWin().innerWidth}x${edWin().innerHeight}`,
+      tw
+        ? "This page looks like Tailwind, so every style change also carries the class that expresses it. Prefer the classes; verify the breakpoint prefixes against the project's own `screens` config."
+        : "",
       "",
-    ];
+    ].filter((l, i) => l !== "" || i > 0);
 
-    // Changes made in a narrow frame are reported separately: a value chosen at
-    // 390px wide is a phone decision and belongs in the phone media query, not
-    // in the base rule where it would restyle desktop too.
+    // Every band is reported separately, named by the media query it means: a
+    // value chosen at 768px is a tablet decision and must not touch the base
+    // rule, and a value chosen at 390px must not touch the tablet either.
     const emit = (title: string, list: Change[]) => {
       if (!list.length) return;
       const byFile = new Map<string, Change[]>();
@@ -675,10 +840,24 @@ class EditStore {
       lines.push(title);
       for (const [file, group] of byFile) {
         lines.push(`  ${file}`);
+        // one rule block per (selector, STATE). Grouping by selector alone put a
+        // hover value and a resting value of the same property in one block,
+        // where the de-duplication kept one and called the other a conflict.
         const bySel = new Map<string, Change[]>();
-        for (const c of group) bySel.set(c.selector, [...(bySel.get(c.selector) ?? []), c]);
-        for (const [sel, props] of bySel) {
-          lines.push(`    ${sel} {`);
+        for (const c of group) {
+          const k = `${c.selector}|${c.state ?? ""}`;
+          bySel.set(k, [...(bySel.get(k) ?? []), c]);
+        }
+        for (const [k, props] of bySel) {
+          const sel = k.slice(0, k.lastIndexOf("|"));
+          const state = k.slice(k.lastIndexOf("|") + 1);
+          // on a Tailwind page the "rule" is a utility class shared by the whole
+          // site. Editing it is the wrong move every time, and saying so beats
+          // hoping the applier notices.
+          const utility = tw && /^\.(?:p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|space|text|font|leading|tracking|rounded|w|h|min-w|max-w|bg|border|shadow|flex|grid|items|justify|self|order|opacity|z)-/.test(sel);
+          lines.push(
+            `    ${sel}${state ? `:${state}` : ""} {${utility ? "   /* UTILITY CLASS, shared site-wide: do NOT edit this rule. Change the element's classes to the tailwind values below. */" : ""}`,
+          );
           // several elements can share one rule with different end values; a
           // rule block with contradictory duplicates is not appliable, so keep
           // the last value per property and say a conflict happened
@@ -691,11 +870,17 @@ class EditStore {
             // codebase's own units, so size props carry the vw equivalent
             const pxv = /^-?\d+(\.\d+)?px$/.test(c.value) ? parseFloat(c.value) : null;
             const sizeProp = ["width", "max-width", "height", "font-size"].includes(String(c.prop));
+            const twClass = tw ? tailwindFor(String(c.prop), c.value, c.bucket, c.state) : null;
             const tags = [
               `was ${c.base}`,
+              c.tok ? `THIS EQUALS THE TOKEN var(${c.tok}) — write the token, not the number` : "",
+              twClass ? `tailwind: ${twClass}` : "",
               pxv !== null && sizeProp && c.vw ? `≈ ${((pxv / c.vw) * 100).toFixed(1)}vw at the stated viewport` : "",
               c.comp ? "isolate-move pair: keeps everything below in place, apply together with the margin-top above" : "",
               conflict ? `CONFLICT: ${list.length} elements set different values, last one shown` : "",
+              c.rival
+                ? `CASCADE: "${c.rival}" already sets this and is at least as specific. The editor's preview only held because it writes !important; this rule as written will LOSE. Put the value on that rule, or make this selector more specific. Do not paper over it with !important.`
+                : "",
             ].filter(Boolean);
             lines.push(`      ${c.prop}: ${c.value};   /* ${tags.join(" · ")} */`);
           }
@@ -704,11 +889,18 @@ class EditStore {
       }
       lines.push("");
     };
-    emit("STYLE CHANGES (desktop viewport)", spacing.filter((c) => c.bucket !== "m"));
-    emit(
-      "STYLE CHANGES MADE AT A NARROW VIEWPORT (scope these in the phone media query, do not touch the base rule)",
-      spacing.filter((c) => c.bucket === "m"),
-    );
+
+    // widest band first: the base rule, then each override in cascade order
+    const bands = [...new Set(spacing.map((c) => c.bucket ?? "d"))].sort((a, b) => bucketOrder(a) - bucketOrder(b));
+    for (const band of bands) {
+      const list = spacing.filter((c) => (c.bucket ?? "d") === band);
+      const media = mediaFor(band);
+      const heading =
+        media === "all"
+          ? "STYLE CHANGES"
+          : `STYLE CHANGES MADE AT ${bucketLabel(band).toUpperCase()} — these belong inside @media ${media} and must NOT touch the base rule`;
+      emit(heading, list);
+    }
 
     if (text.length) {
       lines.push("COPY CHANGES (governed: these need the provenance check)");

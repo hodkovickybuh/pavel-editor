@@ -138,6 +138,12 @@ export const STYLE_PROPS: Record<string, StyleSpec> = {
     label: "stroke style",
     options: ["none", "solid", "dashed", "dotted"],
   },
+  // motion is part of the design, so it is part of the inspector: what the
+  // element currently animates, editable in place, with the reduced-motion
+  // rehearsal one button away in the toolbar
+  transition: { kind: "text", css: "transition", label: "transition", placeholder: "opacity 180ms cubic-bezier(.2,.7,.3,1)" },
+  animation: { kind: "text", css: "animation", label: "animation", placeholder: "none" },
+  "transform-origin": { kind: "text", css: "transformOrigin", label: "origin", placeholder: "center" },
   "box-shadow": { kind: "text", css: "boxShadow", label: "shadow", placeholder: "0 8px 24px rgba(0,0,0,.4)" },
   filter: { kind: "text", css: "filter", label: "filter", placeholder: "blur(4px)" },
   "backdrop-filter": { kind: "text", css: "backdropFilter", label: "backdrop", placeholder: "blur(10px)" },
@@ -165,7 +171,18 @@ export const STYLE_GROUPS: Array<{ title: string; props: string[] }> = [
   { title: "fill & stroke", props: ["background-color", "border-style", "border-color"] },
   { title: "flex", props: ["display", "flex-direction", "justify-content", "align-items", "flex-wrap"] },
   { title: "effects", props: ["box-shadow", "filter", "backdrop-filter", "translate", "transform", "position"] },
+  { title: "motion", props: ["transition", "animation", "transform-origin"] },
 ];
+
+/**
+ * The editor's own stylesheets must never be read as if they were the page's.
+ * The preview sheet matches `[data-pe-id="n"]` with !important and sits LAST in
+ * the document, so without this it wins every cascade walk and the editor starts
+ * telling you your styles live in "(inline <style>)" the moment you edit
+ * anything. It also made the audit report the panel's focus rules as the page's.
+ */
+export const isOwnSheet = (sheet: CSSStyleSheet) =>
+  Boolean((sheet.ownerNode as HTMLElement | null)?.id?.startsWith("pavel-editor"));
 
 export function readStyle(el: HTMLElement, prop: string): string {
   const spec = STYLE_PROPS[prop];
@@ -198,6 +215,7 @@ export function colorTokens(): Array<{ name: string; value: string }> {
   const out: Array<{ name: string; value: string }> = [];
   const seen = new Set<string>();
   for (const sheet of Array.from(edDoc().styleSheets)) {
+    if (isOwnSheet(sheet)) continue;
     let rules: CSSRuleList;
     try {
       rules = sheet.cssRules;
@@ -220,6 +238,139 @@ export function colorTokens(): Array<{ name: string; value: string }> {
     }
   }
   return out.slice(0, 64);
+}
+
+/**
+ * The numeric design tokens (spacing, radii, type sizes) declared on :root, with
+ * the px each one resolves to. Editing in px and reporting px is how a tool ends
+ * up fighting a design system; naming the token the value already equals is how
+ * it cooperates with one.
+ */
+export function numericTokens(): Array<{ name: string; px: number }> {
+  const out: Array<{ name: string; px: number }> = [];
+  const seen = new Set<string>();
+  const rootCs = csOf(edDoc().documentElement);
+  for (const sheet of Array.from(edDoc().styleSheets)) {
+    if (isOwnSheet(sheet)) continue;
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of Array.from(rules)) {
+      const sr = rule as CSSStyleRule;
+      if (typeof sr.selectorText !== "string" || !sr.selectorText.includes(":root")) continue;
+      for (const prop of Array.from(sr.style)) {
+        if (!prop.startsWith("--") || seen.has(prop)) continue;
+        const resolved = rootCs.getPropertyValue(prop).trim();
+        const m = /^(-?\d*\.?\d+)(px|rem|em)$/.exec(resolved);
+        if (!m) continue;
+        const px = parseFloat(m[1]) * (m[2] === "px" ? 1 : parseFloat(rootCs.fontSize) || 16);
+        if (!Number.isFinite(px)) continue;
+        seen.add(prop);
+        out.push({ name: prop, px: Math.round(px * 100) / 100 });
+      }
+    }
+  }
+  return out.slice(0, 96);
+}
+
+/** the token families a property may honestly borrow from */
+const TOKEN_FAMILY: Array<{ test: RegExp; hint: RegExp }> = [
+  { test: /^(margin|padding|gap|row-gap|column-gap)/, hint: /space|spacing|gap|size|pad|margin|gutter|rhythm|step/i },
+  { test: /^border-radius/, hint: /radius|round|corner/i },
+  { test: /^(font-size|line-height|letter-spacing)/, hint: /font|text|type|size|leading|track/i },
+  { test: /^(width|max-width|height)/, hint: /width|size|measure|container|content|max/i },
+];
+
+/** the token this exact px value already equals, if one plausibly belongs here */
+export function tokenFor(prop: string, px: number, tokens: Array<{ name: string; px: number }>): string | null {
+  const fam = TOKEN_FAMILY.find((f) => f.test.test(prop));
+  if (!fam) return null;
+  const hit = tokens.find((t) => Math.abs(t.px - px) < 0.51 && fam.hint.test(t.name));
+  return hit ? hit.name : null;
+}
+
+/** the tokens worth offering as one-click values for this property */
+export function tokensForProp(prop: string, tokens: Array<{ name: string; px: number }>) {
+  const fam = TOKEN_FAMILY.find((f) => f.test.test(prop));
+  if (!fam) return [];
+  return tokens.filter((t) => fam.hint.test(t.name)).sort((a, b) => a.px - b.px);
+}
+
+/**
+ * Every breakpoint the page's OWN stylesheets declare, normalised to upper edges
+ * in px. Two hard-coded buckets (the old <=900 split) meant a value chosen on an
+ * iPad and a value chosen on an iPhone shared one identity and silently
+ * overwrote each other, and the report called both "phone". The page already
+ * knows where its breakpoints are; ask it.
+ */
+const bpCache = new WeakMap<Document, number[]>();
+export function breakpointEdges(): number[] {
+  const doc = edDoc();
+  const cached = bpCache.get(doc);
+  if (cached) return cached;
+  const edges = new Set<number>();
+  const rootPx = parseFloat(csOf(doc.documentElement).fontSize) || 16;
+  const walk = (rules: CSSRuleList) => {
+    for (const r of Array.from(rules)) {
+      const grouping = r as CSSGroupingRule;
+      if (r.constructor.name === "CSSMediaRule") {
+        const text = (r as CSSMediaRule).conditionText ?? "";
+        for (const m of text.matchAll(/(min|max)-width:\s*(\d*\.?\d+)(px|rem|em)/g)) {
+          const px = parseFloat(m[2]) * (m[3] === "px" ? 1 : rootPx);
+          // a min-width of 901 and a max-width of 900 describe the SAME edge
+          edges.add(Math.round(m[1] === "max" ? px : px - 1));
+        }
+      }
+      if (grouping.cssRules) walk(grouping.cssRules);
+    }
+  };
+  for (const sheet of Array.from(doc.styleSheets)) {
+    if (isOwnSheet(sheet)) continue;
+    try {
+      walk(sheet.cssRules);
+    } catch {
+      /* cross-origin sheet */
+    }
+  }
+  // a page with no media queries at all keeps the old single split, so nothing
+  // regresses on a hand-written site
+  const list = [...edges].filter((n) => n >= 240 && n <= 2400).sort((a, b) => a - b);
+  const out = list.length ? list : [900];
+  bpCache.set(doc, out);
+  return out;
+}
+
+/** forget the discovered breakpoints, e.g. when the edit target changes realm */
+export function resetBreakpoints() {
+  const doc = edDoc();
+  bpCache.delete(doc);
+}
+
+/** CSS specificity, the same scoring the cascade walk uses */
+export function specificityOf(sel: string): number {
+  return (
+    (sel.match(/#/g)?.length ?? 0) * 100 +
+    (sel.match(/\.|\[|:(?!:)/g)?.length ?? 0) * 10 +
+    (sel.match(/(^|[\s>+~])[a-z]/gi)?.length ?? 0)
+  );
+}
+
+/**
+ * The rule that would BEAT the one the report tells someone to write.
+ *
+ * The preview stylesheet wins with !important, so the editor always looks right.
+ * The applied CSS has no !important, so a change whose rival is more specific
+ * silently does nothing once it lands in the codebase, and the designer is told
+ * it was applied. Naming the rival in the report is the difference between a
+ * preview and a promise.
+ */
+export function cascadeRival(el: HTMLElement, prop: string, target: string): string | null {
+  const w = winningRuleFor(el, prop);
+  if (!w || w.selector === target) return null;
+  return specificityOf(w.selector) >= specificityOf(target) ? `${w.selector} in ${w.file}` : null;
 }
 
 /** a computed colour as #rrggbb, so it can seed an <input type="color"> */
@@ -471,6 +622,7 @@ export function winningRuleFor(el: Element, prop: string): { selector: string; f
     }
   };
   for (const sheet of Array.from(el.ownerDocument.styleSheets)) {
+    if (isOwnSheet(sheet)) continue;
     let rules: CSSRuleList;
     try {
       rules = sheet.cssRules;

@@ -54,7 +54,7 @@ You never have to think about how; the report explains it to the developer.
 | circle something, like a review | switch to **✎ mark**, draw around it, type the note |
 | use responsive units | type `10vw`, `50%` or `40dvh` straight into any number field |
 | preview on iPhone | press **device**, pick a size; you can keep editing inside it |
-| edit desktop and phone separately | just edit at each size; changes only apply at the size you made them |
+| edit desktop, tablet and phone separately | just edit at each size. The chip at the top of the panel always says which size band you are editing, and a value set on the tablet cannot touch the phone or the desktop |
 | match a design mock | **reference** row at the panel's foot: load the image, set opacity |
 | edit margins/padding visually | the nested box diagram in the panel; click any number in it |
 | compare with the original | press **before/after**; click again to come back |
@@ -62,11 +62,19 @@ You never have to think about how; the report explains it to the developer.
 | swap a photo | drag an image file from your desktop onto any image on the page |
 | move whole sections | press **Tab**, then drag sections up or down |
 | hide something | select it, press **⌫ backspace** |
-| take a break | press **✕**; a small EDIT pill stays in the corner to come back |
+| take a break | press **✕**; a small EDIT pill stays in the corner to come back. Clicking the extension icon again also brings it straight back |
+| open a menu, fill in a form, run a slider | press **▷ use the page**. While that is on you are a normal visitor again, so you can reach the state you want to design, then switch it off and edit what is on screen |
+| design a hover | the **state** row: pick `hover`, change the colour or size, and it is shown at rest so you can actually see it. It is reported as its own hover rule |
+| check the page is usable | the **audit** tab: it measures real contrast, tap-target sizes, missing image descriptions, sideways scrolling and over-long lines, at whatever width you are at. Click the ◎ next to a finding to jump to it |
+| use the site's own spacing values | press **◇** next to any number and pick a token; the developer gets `var(--space-6)` instead of a number nobody chose |
+| see the page with animation off | press **⏸ motion**, the accessibility setting some visitors browse with |
+| hand your session to someone else | **changes** tab, **⤓ save session**. They open the same page, press **⤒ load**, and see your version exactly, notes and circles included |
 
 ## What the report means
 
-Every edit you make is remembered with what it was before, what it is now, and, when the site's code allows it, exactly which file and rule it belongs to. Notes ride along as instructions. Changes you made while previewing a phone size are marked so they only affect phones. Hand the report over and the site gets your design, for real, in code.
+Every edit you make is remembered with what it was before, what it is now, and, when the site's code allows it, exactly which file and rule it belongs to. Notes ride along as instructions. Edits are grouped by screen size, each group naming the exact rule the developer has to write, so a phone decision can never restyle the desktop by accident. Where a value you chose already matches one of the site's own design tokens, the report says so. Where the site's code would fight your change, the report warns the developer instead of letting them believe it was applied. Hand the report over and the site gets your design, for real, in code.
+
+If the developer has the bridge running (`npx pavel-editor-bridge` in the project), your button says **APPLY TO CODE** instead, and pressing it drops the report straight into their project. Same report, one less copy-paste.
 
 ## What it deliberately does not do
 

@@ -29,15 +29,17 @@ import {
   ruleReach,
   shortLabel,
   toHex,
+  tokensForProp,
   type NumProp,
 } from "./selectors";
 import { centring } from "./geometry";
-import { bucketOf, changeKey } from "./store";
+import { bucketOf, bucketLabel, changeKey, store, type EditState } from "./store";
+import { runAudit, type Finding } from "./audit";
 import { csOf } from "./context";
 import type { Change } from "./store";
 import type { FrameSpec } from "./Frame";
 
-export type Tab = "design" | "layers" | "changes";
+export type Tab = "design" | "layers" | "changes" | "audit";
 export type MoveMode = "push" | "isolate";
 
 /* ------------------------------------------------------------- primitives */
@@ -221,6 +223,7 @@ function NumRow({
   mixed,
   changed,
   el,
+  tokens,
   onSet,
   onSetRaw,
   onResetKey,
@@ -230,12 +233,15 @@ function NumRow({
   mixed: boolean;
   changed: boolean;
   el: HTMLElement;
+  /** the design tokens this property may honestly borrow from */
+  tokens: Array<{ name: string; px: number }>;
   onSet: (v: number) => void;
   /** a typed value carrying its own unit: 10vw, 50%, 3rem, 40dvh */
   onSetRaw: (v: string) => void;
   onResetKey?: () => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const [tokOpen, setTokOpen] = useState(false);
   const scrub = useRef<{ startX: number; base: number; prevInline: string } | null>(null);
   const spec = PROPS[prop];
 
@@ -267,7 +273,14 @@ function NumRow({
     if (Math.abs(v - s.base) > 0.001) onSet(v);
   };
 
+  // a value off the 4px scale is the tell that a page has no spacing system.
+  // Said quietly, next to the number, at the moment it can still be fixed.
+  const scaleOff =
+    !mixed && value !== 0 && Math.abs(value % 4) > 0.001 && /^(margin|padding|gap|row-gap|column-gap)/.test(prop);
+  const match = tokens.find((t) => Math.abs(t.px - value) < 0.51);
+
   return (
+    <>
     <div className="pe-row">
       {changed && <button className="pe-tick" title="edited · click to reset" onClick={onResetKey} />}
       <span
@@ -279,6 +292,22 @@ function NumRow({
       >
         {prop}
       </span>
+      {tokens.length > 0 && (
+        <button
+          className={`pe-btn sm${match ? " on" : ""}`}
+          style={{ padding: "0 5px", fontSize: 10 }}
+          title={match ? `this is var(${match.name}) · click for the other tokens` : "write a design token instead of a number"}
+          onClick={() => setTokOpen((o) => !o)}
+        >
+          ◇
+        </button>
+      )}
+      {scaleOff && (
+        <span
+          title={`${value}px is off the 4px scale · nearest ${Math.round(value / 4) * 4}`}
+          style={{ width: 5, height: 5, borderRadius: 99, background: "var(--pe-warn)", flex: "none" }}
+        />
+      )}
       <input
         className={`pe-input val${changed ? " changed" : ""}`}
         value={draft ?? (mixed ? "mixed" : String(value))}
@@ -304,6 +333,25 @@ function NumRow({
         }}
       />
     </div>
+    {tokOpen && (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "2px 14px 8px 18px" }}>
+        {tokens.map((t) => (
+          <button
+            key={t.name}
+            className={`pe-btn sm${match?.name === t.name ? " on" : ""}`}
+            style={{ fontFamily: "var(--pe-mono)", fontSize: 9.5, padding: "0 6px" }}
+            title={`${t.name} = ${t.px}px`}
+            onClick={() => {
+              onSetRaw(`var(${t.name})`);
+              setTokOpen(false);
+            }}
+          >
+            {t.name.replace(/^--/, "")} <span style={{ color: "var(--pe-faint)" }}>{t.px}</span>
+          </button>
+        ))}
+      </div>
+    )}
+    </>
   );
 }
 
@@ -480,6 +528,7 @@ function KeysSheet() {
       <Row keys={<>drag in a row</>}>inside a flex/grid row it REORDERS the cards</Row>
       <Row keys={<>drag edge</>}>right or bottom edge resizes, corner does both</Row>
       <Row keys={<><K k="↑" /> <K k="↓" /></>}>nudge 1px · <K k="⇧" /> makes it 10px</Row>
+      <Row keys={<><K k="⌥" />+<K k="←" /> <K k="→" /></>}>nudge sideways (plain ←→ walk the tree)</Row>
       <Row keys={<K k="P" />}>solo ↔ push: what happens to content below</Row>
 
       <H>EDIT</H>
@@ -501,6 +550,15 @@ function KeysSheet() {
       <Row keys={<K k="Tab" />}>sections mode: drag whole page sections</Row>
       <Row keys={<>✎ mark</>}>circle anything freehand, attach a note</Row>
       <Row keys={<K k="?" />}>open or close this sheet</Row>
+
+      <H>THE TOOLBAR</H>
+      <Row keys={<>▷ use the page</>}>hands the page back: open a menu or a modal, fill a form, then edit what appeared</Row>
+      <Row keys={<>state</>}>edit hover, focus and active values · they are shown at rest while you work</Row>
+      <Row keys={<>⏸ motion</>}>rehearse prefers-reduced-motion with every animation off</Row>
+      <Row keys={<>◇</>}>on a number: write the design token instead of the px</Row>
+      <Row keys={<>audit</>}>contrast, tap targets, alt text, focus, overflow, measure · click ◎ to jump to it</Row>
+      <Row keys={<>save session</>}>hand the whole edit to someone else as a file</Row>
+      <Row keys={<>the chip</>}>which breakpoint band your edits are being scoped to right now</Row>
     </div>
   );
 }
@@ -646,6 +704,15 @@ export function Panel({
   updateTo,
   refSkin,
   setRefSkin,
+  interact,
+  setInteract,
+  editState,
+  setEditState,
+  reducedMotion,
+  setReducedMotion,
+  bridge,
+  band,
+  onImported,
 }: {
   mode: "spacing" | "sections" | "mark";
   setMode: (m: "spacing" | "sections" | "mark") => void;
@@ -696,19 +763,35 @@ export function Panel({
   updateTo: string | null;
   refSkin: { url: string; opacity: number; on: boolean } | null;
   setRefSkin: (v: { url: string; opacity: number; on: boolean } | null) => void;
+  interact: boolean;
+  setInteract: (v: boolean) => void;
+  editState: EditState;
+  setEditState: (s: EditState) => void;
+  reducedMotion: boolean;
+  setReducedMotion: (v: boolean) => void;
+  /** the bridge's working directory when one is listening */
+  bridge: string | null;
+  /** which breakpoint band the current viewport falls in, in words */
+  band: string;
+  onImported: (n: number) => void;
 }) {
   void tick; // re-render trigger; the panel reads the live DOM each pass
 
   const primary = selection[0] ?? null;
   const reach = primary ? ruleReach(primary) : 1;
-  const matchCount = primary ? matchingElements(primary).length : 1;
+  // memoised: the panel re-renders on every scroll and every drag frame, and
+  // this walks the whole document
+  const matchCount = useMemo(() => (primary ? matchingElements(primary).length : 1), [primary]);
   const c = primary ? centring(primary) : null;
   const primaryPath = primary ? domPath(primary) : null;
   const changedKeys = useMemo(() => new Set(changes.map((ch) => ch.key)), [changes]);
-  /** a prop's change identity at the CURRENT breakpoint bucket */
-  const keyFor = (prop: string) => (primaryPath ? changeKey(primaryPath, prop, bucketOf()) : "");
+  /** a prop's change identity at the CURRENT band and state */
+  const keyFor = (prop: string) => (primaryPath ? changeKey(primaryPath, prop, bucketOf(), editState) : "");
   const tokens = useMemo(() => (primary ? colorTokens() : []), [primary]);
+  const numTokens = useMemo(() => (primary ? store.tokens() : []), [primary]);
   const fonts = useMemo(() => (primary ? loadedFonts() : []), [primary]);
+  const [findings, setFindings] = useState<Finding[] | null>(null);
+  const audit = () => setFindings(runAudit());
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     try {
@@ -794,7 +877,9 @@ export function Panel({
         <span className="pe-title">
           <b>PAVEL</b> EDITOR
         </span>
-        <span className="pe-chip">{frameSpec ? `${frameSpec.w}×${frameSpec.h}` : "desktop"}</span>
+        <span className="pe-chip" title={`edits made now are scoped to ${band}`}>
+          {frameSpec ? `${frameSpec.w}×${frameSpec.h}` : band}
+        </span>
         <span style={{ flex: 1 }} />
         <button className={`pe-help${showKeys ? " on" : ""}`} onClick={() => setShowKeys(!showKeys)} title="keys & gestures · ?">
           ?
@@ -831,6 +916,13 @@ export function Panel({
             <button className={`pe-btn${frameSpec ? " on" : ""}`} onClick={() => (frameSpec ? onCloseFrame() : onOpenFrame())} title="preview and edit at a real device size">
               ▢ device
             </button>
+            <button
+              className={`pe-btn${interact ? " on" : ""}`}
+              onClick={() => setInteract(!interact)}
+              title="hand the page back: open a menu, submit a form, run a carousel, then turn this off and edit what you see"
+            >
+              {interact ? "◉ using the page" : "▷ use the page"}
+            </button>
             <span style={{ flex: 1 }} />
             <div className="pe-seg" title="P · what happens to the content BELOW when you move something">
               <button className={moveMode === "isolate" ? "on" : ""} onClick={() => setMoveMode("isolate")} title="move only this element; everything below stays put (like Figma)">
@@ -853,10 +945,35 @@ export function Panel({
             <button className={`pe-btn${showGrid ? " on" : ""}`} onClick={() => setShowGrid(!showGrid)} title="G · 8px grid">
               grid
             </button>
+            <button
+              className={`pe-btn${reducedMotion ? " on" : ""}`}
+              onClick={() => setReducedMotion(!reducedMotion)}
+              title="rehearse prefers-reduced-motion: every transition and animation off, so the still page can be judged"
+            >
+              ⏸ motion
+            </button>
             <span style={{ flex: 1 }} />
             <button className={`pe-btn${showingOriginal ? " on" : ""}`} onClick={onToggleOriginal} title="flip the whole page between BEFORE (original) and AFTER (your edits)">
               {showingOriginal ? "original ◉" : "before/after"}
             </button>
+          </div>
+
+          {/* the state being edited: a hover value is a design decision too */}
+          <div style={{ display: "flex", gap: 6, padding: "8px 14px", borderBottom: "1px solid var(--pe-border)", flex: "none", alignItems: "center" }}>
+            <span style={{ color: "var(--pe-faint)", fontSize: 10.5 }}>state</span>
+            <div className="pe-seg">
+              {([
+                ["", "rest"],
+                ["hover", "hover"],
+                ["focus-visible", "focus"],
+                ["active", "active"],
+              ] as Array<[EditState, string]>).map(([s, label]) => (
+                <button key={label} className={editState === s ? "on" : ""} onClick={() => setEditState(s)} title={s ? `edit the ${s} values · they are shown at rest while you do` : "the resting values"}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {editState && <span style={{ color: "var(--pe-violet)", fontSize: 10 }}>shown at rest</span>}
           </div>
 
           {/* variants */}
@@ -887,10 +1004,18 @@ export function Panel({
 
           {/* tabs */}
           <div className="pe-tabs">
-            {(["design", "layers", "changes"] as Tab[]).map((t) => (
-              <button key={t} className={`pe-tab${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>
+            {(["design", "layers", "changes", "audit"] as Tab[]).map((t) => (
+              <button
+                key={t}
+                className={`pe-tab${tab === t ? " on" : ""}`}
+                onClick={() => {
+                  setTab(t);
+                  if (t === "audit" && !findings) audit();
+                }}
+              >
                 {t}
                 {t === "changes" && changes.length ? <span className="n">{changes.length}</span> : null}
+                {t === "audit" && findings?.length ? <span className="n">{findings.length}</span> : null}
               </button>
             ))}
           </div>
@@ -1022,6 +1147,7 @@ export function Panel({
                                 mixed={mixed}
                                 changed={changedKeys.has(keyFor(prop))}
                                 el={primary}
+                                tokens={tokensForProp(prop, numTokens)}
                                 onSet={(v) => onSet(prop, v)}
                                 onSetRaw={(v) => onSetRaw(prop, v)}
                                 onResetKey={() => primaryPath && onResetOne(keyFor(prop))}
@@ -1085,9 +1211,78 @@ export function Panel({
 
             {!showKeys && tab === "layers" && <Layers root={root} selection={selection} onPick={(el) => setSelection([el])} onHover={setHover} />}
 
+            {!showKeys && tab === "audit" && (
+              <div style={{ padding: "8px 0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 14px 8px" }}>
+                  <button className="pe-btn" onClick={audit} title="re-run every check at the current width">
+                    ↻ run checks
+                  </button>
+                  <span style={{ color: "var(--pe-faint)", fontSize: 10 }}>
+                    {findings ? `${findings.filter((f) => f.level === "fail").length} fail · ${findings.filter((f) => f.level === "warn").length} warn` : "contrast, targets, alt, focus, overflow, measure"}
+                  </span>
+                </div>
+                {findings && !findings.length && (
+                  <span style={{ color: "var(--pe-mint)", padding: "0 14px" }}>nothing failed at this width. Check the phone width too.</span>
+                )}
+                {findings?.map((f, i) => (
+                  <div key={i} className="pe-change" style={{ borderLeftColor: f.level === "fail" ? "var(--pe-warn)" : "var(--pe-border-hi)" }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 10 }}>
+                      <div style={{ color: f.level === "fail" ? "var(--pe-warn)" : "var(--pe-dim)", fontWeight: 600 }}>{f.rule}</div>
+                      <div style={{ color: "var(--pe-text)", wordBreak: "break-word" }}>{f.msg}</div>
+                    </div>
+                    {f.el && (
+                      <button
+                        className="pe-btn sm"
+                        title="select the element"
+                        onMouseEnter={() => setHover(f.el)}
+                        onMouseLeave={() => setHover(null)}
+                        onClick={() => {
+                          setSelection([f.el!]);
+                          f.el!.scrollIntoView({ block: "center", behavior: "smooth" });
+                        }}
+                      >
+                        ◎
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {!showKeys && tab === "changes" && (
               <div style={{ padding: "10px 0" }}>
                 {!changes.length && <span style={{ color: "var(--pe-faint)", padding: "0 14px" }}>no changes yet · everything you edit lands here</span>}
+                {changes.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, padding: "0 14px 8px" }}>
+                    <button
+                      className="pe-btn sm"
+                      title="save this session as a file someone else can load on their machine"
+                      onClick={() => {
+                        const blob = new Blob([store.exportSession()], { type: "application/json" });
+                        const a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `pavel-editor-${location.pathname.replace(/\W+/g, "-").replace(/^-|-$/g, "") || "page"}.json`;
+                        a.click();
+                        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+                      }}
+                    >
+                      ⤓ save session
+                    </button>
+                    <label className="pe-btn sm" style={{ cursor: "pointer" }}>
+                      ⤒ load
+                      <input
+                        type="file"
+                        accept="application/json"
+                        style={{ display: "none" }}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          onImported(store.importSession(await f.text()));
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
                 {changes.map((ch) => (
                   <div key={ch.key} className={`pe-change${ch.prop === "note" ? " note" : ""}`}>
                     <div style={{ flex: 1, minWidth: 0, fontSize: 10 }}>
@@ -1099,9 +1294,18 @@ export function Panel({
                           <span style={{ color: "var(--pe-violet)" }}>{ch.value}</span>
                         ) : (
                           <span className="mono">
-                            {ch.prop}: <span style={{ color: "var(--pe-blue)" }}>{ch.value}</span>{" "}
+                            {ch.prop}
+                            {ch.state ? <span style={{ color: "var(--pe-violet)" }}>:{ch.state}</span> : null}:{" "}
+                            <span style={{ color: "var(--pe-blue)" }}>{ch.value}</span>{" "}
                             <span style={{ color: "var(--pe-faint)" }}>was {ch.base}</span>
-                            {(ch.vw ?? 1440) <= 900 && <span style={{ color: "var(--pe-warn)" }}> @{ch.vw}px</span>}
+                            {ch.bucket && <span style={{ color: "var(--pe-dim)" }}> · {bucketLabel(ch.bucket)}</span>}
+                            {ch.tok && <span style={{ color: "var(--pe-mint)" }}> = var({ch.tok})</span>}
+                            {ch.rival && (
+                              <span style={{ color: "var(--pe-warn)" }} title={`"${ch.rival}" already sets this and is at least as specific. Applied as a plain rule this value will lose; the report says so.`}>
+                                {" "}
+                                ⚠ cascade
+                              </span>
+                            )}
                           </span>
                         )}
                       </div>
@@ -1126,7 +1330,9 @@ export function Panel({
                 style={{ display: "none" }}
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) setRefSkin({ url: URL.createObjectURL(f), opacity: 0.5, on: true });
+                  if (!f) return;
+                  if (refSkin) URL.revokeObjectURL(refSkin.url);
+                  setRefSkin({ url: URL.createObjectURL(f), opacity: 0.5, on: true });
                 }}
               />
             </label>
@@ -1168,7 +1374,13 @@ export function Panel({
                 window.setTimeout(() => setCopied(false), 1200);
               }}
             >
-              {copied ? `COPIED ▸ ${changes.length} CHANGE${changes.length === 1 ? "" : "S"}` : "COPY FOR AI"}
+              {copied
+                ? bridge
+                  ? `SENT ▸ ${changes.length} CHANGE${changes.length === 1 ? "" : "S"}`
+                  : `COPIED ▸ ${changes.length} CHANGE${changes.length === 1 ? "" : "S"}`
+                : bridge
+                  ? "APPLY TO CODE"
+                  : "COPY FOR AI"}
             </button>
             <button className="pe-btn" style={{ height: 32 }} onClick={onResetAll}>
               reset

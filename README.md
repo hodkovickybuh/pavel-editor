@@ -38,7 +38,7 @@ Then press one button and hand the whole session to your AI assistant as a repor
 **Script tag**, for a site you own (pin a release tag, `@main` caches for hours):
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.3.0/dist/pavel-editor.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.9.0/dist/pavel-editor.js"></script>
 ```
 
 <details>
@@ -47,7 +47,7 @@ Then press one button and hand the whole session to your AI assistant as a repor
 Sites you do not control (github.com, banks, most big products) send a Content-Security-Policy that blocks ALL outside scripts. Pasting this there produces a "violates the following Content Security Policy" error every time; that is the site refusing, not the editor breaking. **It cannot be tested on github.com.** To just try the editor, use the [live demo](https://hodkovickybuh.github.io/pavel-editor/demo/) or the extension. On your own localhost or site, paste away:
 
 ```js
-var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.3.0/dist/pavel-editor.js';document.body.appendChild(s);
+var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkovickybuh/pavel-editor@v1.9.0/dist/pavel-editor.js';document.body.appendChild(s);
 ```
 
 </details>
@@ -81,6 +81,16 @@ var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkov
 | **Image swap** | drop a file onto any image; the report names the file for whoever places the asset |
 | **Sections** | Tab, then drag whole page sections to reorder |
 | **History** | ⌘Z across everything, one step per gesture, survives reloads and hot reloads |
+| **Real breakpoints** | bands are read from the page's OWN media queries, so a value set at 768px, one set at 390px and one set on desktop are three independent values that never overwrite each other |
+| **States** | edit `hover`, `focus-visible` and `active` values, shown at rest while you work on them, reported as their own `:hover` rule |
+| **Use the page** | one button hands the page back: open a menu, fill a form, run a carousel, then edit the state you just reached |
+| **Audit** | contrast on real painted colours, tap targets, alt text, missing focus styles, sideways overflow, line measure, off-scale spacing. Click a finding to jump to it |
+| **Tokens** | `◇` on any number writes `var(--space-6)` instead of `24px`, and a value that already equals a token says so in the report |
+| **Tailwind** | on a Tailwind page every change also reports the class (`sm:max-lg:pt-8`), and warns you not to edit the shared utility rule |
+| **Cascade honesty** | if a more specific rule already sets the property, the report says the plain rule will LOSE, and names the rival. The preview wins with `!important`; the report never pretends that is the fix |
+| **Motion** | transition and animation are editable, and `⏸ motion` rehearses `prefers-reduced-motion` with everything off |
+| **Bridge** | run `npx pavel-editor-bridge` in the project and the button becomes **APPLY TO CODE**: the report lands in `.pavel-editor/` and prints in that terminal, where your agent is already looking |
+| **Handoff** | save the whole session as a file; anyone with the codebase loads it and sees the identical page, notes and marks included |
 
 ![multi-select](assets/multiselect.png)
 ![resize](assets/resize.png)
@@ -92,27 +102,33 @@ var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/hodkov
 ```
 PAVEL EDITOR REPORT   /   viewport 1560x960
 
-STYLE CHANGES (desktop viewport)
+STYLE CHANGES MADE AT 1025PX AND WIDER — these belong inside @media (min-width: 1025px) and must NOT touch the base rule
   HeroFlow.module.css
     .lead h1 {
-      margin-top: 56px;   /* was 16px */
+      margin-top: 56px;   /* was 16px · THIS EQUALS THE TOKEN var(--space-14) — write the token, not the number */
+    }
+    .lead h1:hover {
+      color: #fff;   /* was #e8e8ea */
     }
 
-STYLE CHANGES MADE AT A NARROW VIEWPORT (scope these in the phone media query)
-  ...
+STYLE CHANGES MADE AT UP TO 640PX — these belong inside @media (max-width: 640px) and must NOT touch the base rule
+  Cards.module.css
+    .card {
+      padding-top: 24px;   /* was 17px · tailwind: max-sm:pt-6 · CASCADE: ".grid .card in app.css" already sets this and is at least as specific. The editor's preview only held because it writes !important; this rule as written will LOSE. */
+    }
 
 NOTES (design intent, no CSS attached; act on these too)
   section.hero a.cta: make this pop way more
 ```
 
-Paste it to Claude, Cursor, or a colleague. The stylesheet stays the source of truth; the editor is the conversation about it.
+Paste it to Claude, Cursor, or a colleague, or run the bridge and let it go straight to the project. The stylesheet stays the source of truth; the editor is the conversation about it.
 
 ![changes](assets/changes.png)
 ![device](assets/device.png)
 
 ## Honesty rules
 
-The editor previews with inline styles on the live DOM; it never writes your code. Duplicates are preview-only and say so. Section reorder is preview-only; refresh restores. Editing a shared rule warns you how many elements it moves. There is no pen tool and no components, because a live page has no honest equivalent.
+The editor previews through one injected stylesheet, scoped to the media query of the band you were in; it never writes your code, and the bridge does not either. Duplicates are preview-only and say so. Section reorder is preview-only; refresh restores. Editing a shared rule warns you how many elements it moves. When the preview only held because of `!important`, the report says the plain rule will lose instead of letting you find out later. There is no pen tool and no components, because a live page has no honest equivalent.
 
 ## Develop
 
@@ -120,8 +136,9 @@ The editor previews with inline styles on the live DOM; it never writes your cod
 bun install
 bun run build       # dist/pavel-editor.js + extension/pavel-editor.js
 bun run typecheck
+bun run bridge      # the APPLY TO CODE endpoint, in the project you are editing
 ```
 
-After pushing an update, purge the CDN: `curl https://purge.jsdelivr.net/gh/hodkovickybuh/pavel-editor@main/dist/pavel-editor.js`
+Releases are pinned tags, never `@main`: jsDelivr caches `@main` for hours and its purge is best-effort, which has served a stale build more than once. Cut a tag, then bump the tag in the consumers.
 
 MIT · built by Pavel with Claude

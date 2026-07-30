@@ -14,10 +14,25 @@
  *   drag selected    move              double-click    drill into the group
  *   alt + hover      measure           ←→              walk the tree
  *   arrows           nudge 1px         shift+arrows    10px
+ *   alt + ←→         nudge sideways
  *   cmd+Z / +shift   undo / redo       cmd+C / cmd+V   copy / paste style
  *   enter            edit the text     N               pin a note
  *   S C G            spacing bands, centring, 8px grid
  *   P                push/isolate      D / backspace   duplicate / hide
+ *
+ * THE FOUR THINGS THAT MAKE IT TRUTHFUL rather than a nice overlay:
+ *   BANDS    every style edit is scoped to the media query of the breakpoint
+ *            band it was made in, and the bands come from the page's own
+ *            stylesheets (store.ts bucketOf, selectors.ts breakpointEdges).
+ *            Desktop, tablet and phone values coexist and never overwrite.
+ *   STATES   hover / focus-visible / active are editable, mirrored onto the
+ *            resting element while you work so they can be seen, and reported
+ *            as their own pseudo-rule.
+ *   CASCADE  the preview wins with !important; the applied CSS will not. When a
+ *            more specific rule already owns the property, the report says the
+ *            plain rule will lose and names the rival (selectors.ts cascadeRival).
+ *   INTERACT one button unbinds every listener, so the page can be USED: open
+ *            the menu, submit the form, then edit the state you reached.
  *
  * MOVE MODES, the one concept with no Figma equivalent:
  *   push     writes margin-top. Honest CSS: the element moves and everything
@@ -58,7 +73,7 @@ import {
   snapVertical,
   verticalGaps,
 } from "./geometry";
-import { bucketOf, changeKey, store, type Change } from "./store";
+import { bucketLabel, bucketOf, store, type Change, type EditState } from "./store";
 import { VERSION } from "./version";
 import { Overlay } from "./Overlay";
 import { Panel, type MoveMode, type Tab } from "./Panel";
@@ -152,6 +167,17 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   const [noteDraft, setNoteDraft] = useState<{ el: HTMLElement; text: string; mark?: string } | null>(null);
   /** the stroke being drawn right now, as an SVG points string */
   const [liveStroke, setLiveStroke] = useState<string | null>(null);
+  /** INTERACT MODE: hands the page back. Every listener comes off, so links,
+      menus, modals, carousels and forms behave exactly as they do for a visitor.
+      Editing a state that only exists after a click was the tool's worst gap:
+      you could not open the thing you needed to edit. */
+  const [interact, setInteract] = useState(false);
+  /** which pseudo-state the inspector writes to */
+  const [editState, setEditState] = useState<EditState>("");
+  /** kill every transition and animation, to check the reduced-motion fallback */
+  const [reducedMotion, setReducedMotion] = useState(false);
+  /** the local bridge's cwd when one is listening, so edits can go to the code */
+  const [bridge, setBridge] = useState<string | null>(null);
   /** the device frame, and the realm handle once its document is ready */
   const [frameSpec, setFrameSpec] = useState<FrameSpec | null>(null);
   const [frameRealm, setFrameRealm] = useState<{ win: Window; doc: Document } | null>(null);
@@ -224,6 +250,42 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     window.addEventListener("pavel-editor:show", show);
     return () => window.removeEventListener("pavel-editor:show", show);
   }, []);
+
+  // is a local bridge listening? If so the report can go straight to the
+  // codebase instead of through a clipboard and a paste.
+  useEffect(() => {
+    if (!on) return;
+    let alive = true;
+    fetch("http://127.0.0.1:7331/ping", { mode: "cors" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { cwd?: string } | null) => {
+        if (alive && j?.cwd) setBridge(j.cwd);
+      })
+      .catch(() => {
+        /* no bridge running: the clipboard stays the path */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [on]);
+
+  // the reduced-motion rehearsal: prefers-reduced-motion cannot be faked from a
+  // page, but its OUTCOME can, and that is what needs checking
+  useEffect(() => {
+    const doc = edDoc();
+    const id = "pavel-editor-reduced";
+    const existing = doc.getElementById(id);
+    if (!reducedMotion) {
+      existing?.remove();
+      return;
+    }
+    if (existing) return;
+    const tag = doc.createElement("style");
+    tag.id = id;
+    tag.textContent = `*, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }`;
+    doc.head.appendChild(tag);
+    return () => tag.remove();
+  }, [reducedMotion, realmTick]);
 
   // once per session, ask jsDelivr's data API for the newest release tag and
   // offer the zip when this copy is older; sideloaded copies (friends with the
@@ -400,7 +462,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   );
 
   const nudge = useCallback(
-    (delta: number) => {
+    (delta: number, axis: "y" | "x" = "y") => {
       const els = selRef.current;
       if (!els.length) return;
       const batch: Parameters<typeof store.commit>[0] = [];
@@ -408,9 +470,12 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         if (moveModeRef.current === "isolate") {
           const tr = csOf(el).translate;
           const parts = !tr || tr === "none" ? [0, 0] : tr.split(" ").map((v) => parseFloat(v) || 0);
-          store.setStyle(el, "translate", `${Math.round(parts[0] ?? 0)}px ${Math.round((parts[1] ?? 0) + delta)}px`, batch);
+          const x = Math.round(parts[0] ?? 0) + (axis === "x" ? delta : 0);
+          const y = Math.round(parts[1] ?? 0) + (axis === "y" ? delta : 0);
+          store.setStyle(el, "translate", `${x}px ${y}px`, batch);
         } else {
-          store.set(el, "margin-top", readProp(el, "margin-top") + delta, batch);
+          const prop = axis === "y" ? "margin-top" : "margin-left";
+          store.set(el, prop, readProp(el, prop) + delta, batch);
         }
       });
       store.commit(batch);
@@ -491,7 +556,10 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   /* --------------------------------------------------------- interactions */
 
   useEffect(() => {
-    if (!on) return;
+    // interact mode binds NOTHING: the page is the page again. Reaching for a
+    // flag inside each handler would have left click-swallowing and hover
+    // outlines alive, which is most of what makes a page feel captured.
+    if (!on || interact) return;
 
     const endDrag = () => {
       const d = drag.current;
@@ -558,7 +626,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
             baseW: r.width,
             baseH: r.height,
             starts: ["width", "height", "max-width"].map((prop) => {
-              const k = changeKey(p, prop, bucketOf());
+              const k = store.keyOf(p, prop);
               return { key: k, before: store.changes.get(k) };
             }),
             moved: false,
@@ -621,7 +689,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
           starts: els.flatMap((x) => {
             const p = store.pathOf(x);
             return ["margin-top", "margin-left", "translate"].map((prop) => {
-              const k = changeKey(p, prop, bucketOf());
+              const k = store.keyOf(p, prop);
               return { key: k, before: store.changes.get(k) };
             });
           }),
@@ -894,15 +962,22 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         return;
       }
 
-      if (e.key === "ArrowLeft") {
+      // alt turns the horizontal arrows into a nudge; without it they walk the
+      // tree, which left the x axis reachable only by dragging
+      if (e.key === "ArrowLeft" && !e.altKey) {
         e.preventDefault();
         if (primary.parentElement && primary.parentElement.tagName !== "BODY") setSelection([primary.parentElement]);
         return;
       }
-      if (e.key === "ArrowRight") {
+      if (e.key === "ArrowRight" && !e.altKey) {
         e.preventDefault();
         const kid = [...primary.children].find((c): c is HTMLElement => isElem(c) && !c.hasAttribute("data-editmode-ui"));
         if (kid) setSelection([kid]);
+        return;
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        nudge((e.shiftKey ? 10 : 1) * (e.key === "ArrowLeft" ? -1 : 1), "x");
         return;
       }
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -1006,7 +1081,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         /* the iframe realm may already be gone */
       }
     };
-  }, [on, realmTick, pick, setSelection, flash, bump, nudge, copyStyle, pasteStyle, hideSelection, changes, startTextEdit]);
+  }, [on, interact, realmTick, pick, setSelection, flash, bump, nudge, copyStyle, pasteStyle, hideSelection, changes, startTextEdit]);
 
   /* ------------------------------------------------------ align & distribute */
 
@@ -1063,12 +1138,35 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
 
   const copyReport = useCallback(() => {
     const text = store.report();
-    navigator.clipboard.writeText(text).then(
-      () => flash(`copied · ${changes.length} change${changes.length === 1 ? "" : "s"} · paste it to Claude`),
-      () => flash("clipboard blocked, the report is in the console"),
-    );
+    // the clipboard always gets it; the bridge is the shortcut, not the only path
+    navigator.clipboard.writeText(text).catch(() => {
+      /* clipboard blocked (no gesture, no permission): the console has it */
+    });
     console.log(text);
-  }, [flash, changes.length]);
+    if (!bridge) {
+      flash(`copied · ${changes.length} change${changes.length === 1 ? "" : "s"} · paste it to Claude`);
+      return;
+    }
+    fetch("http://127.0.0.1:7331/report", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ report: text, url: location.href, count: changes.length }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((j: { file?: string }) => flash(`sent to the code · ${j.file ?? "the bridge"} · also copied`))
+      .catch(() => flash("the bridge stopped answering · the report is copied instead"));
+  }, [flash, changes.length, bridge]);
+
+  /** the inspector's target state, kept in the store because every write reads it */
+  const pickState = useCallback(
+    (s: EditState) => {
+      setEditState(s);
+      store.setState(s);
+      bump();
+      if (s) flash(`editing the ${s} state · values are previewed at rest so you can see them`);
+    },
+    [bump, flash],
+  );
 
   const toggleOriginal = useCallback(() => {
     const off = store.toggleOriginal();
@@ -1125,6 +1223,8 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         /* cross-origin frame or torn-down realm: nothing to retire */
       }
       setEditTarget(win, doc);
+      // the frame is a different document: its breakpoints and tokens are its own
+      store.invalidate();
       setFrameRealm({ win, doc });
       setSelection([]);
       setHover(null);
@@ -1138,6 +1238,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
 
   const closeFrame = useCallback(() => {
     setEditTarget(null);
+    store.invalidate();
     setFrameRealm(null);
     setFrameSpec(null);
     setSelection([]);
@@ -1281,6 +1382,18 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         updateTo={updateTo}
         refSkin={refSkin}
         setRefSkin={setRefSkin}
+        interact={interact}
+        setInteract={setInteract}
+        editState={editState}
+        setEditState={pickState}
+        reducedMotion={reducedMotion}
+        setReducedMotion={setReducedMotion}
+        bridge={bridge}
+        band={bucketLabel(bucketOf())}
+        onImported={(n) => {
+          bump();
+          flash(`loaded ${n} change${n === 1 ? "" : "s"} from the file`);
+        }}
       />
 
       {/* note input: a floating field, because prompt() would freeze the page */}
