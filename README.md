@@ -171,4 +171,8 @@ bun run bridge      # the APPLY TO CODE endpoint, in the project you are editing
 
 Releases are pinned tags, never `@main`: jsDelivr caches `@main` for hours and its purge is best-effort, which has served a stale build more than once. Cut a tag, then bump the tag in the consumers.
 
+## Privacy
+
+It collects nothing: no analytics, no telemetry, no accounts, no server. The extension asks for `activeTab` only, so it can reach a tab at the moment you click its icon and nothing before or after. The [**privacy policy**](https://hodkovickybuh.github.io/pavel-editor/privacy.html) lists every network request it makes (three: a version check, a localhost bridge check, and the report you press a button to send to your own machine) and every storage key it writes, each with the file to verify the claim against.
+
 MIT · built by Pavel with Claude

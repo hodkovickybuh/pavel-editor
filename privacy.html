@@ -1,9 +1,236 @@
-<!doctype html><html><head><meta charset="utf-8"><title>PAVEL EDITOR · Privacy</title>
-<style>body{font-family:system-ui;max-width:640px;margin:60px auto;padding:0 20px;line-height:1.7;color:#222}h1{font-size:22px}</style></head><body>
-<h1>PAVEL EDITOR — Privacy Policy</h1>
-<p>PAVEL EDITOR is a visual page editor that runs entirely in your browser.</p>
-<p><b>It collects no data.</b> No analytics, no tracking, no accounts, no network transmission of page content. Everything you edit stays in your browser's own storage (sessionStorage/localStorage) on your machine and is never sent anywhere.</p>
-<p>The extension requests access to the pages you visit solely so that, when you click its icon, it can inject the editor into that page. It does nothing on any page until you click the icon.</p>
-<p>The only network request the editor makes is a version check against the public jsDelivr API to tell you when an update is available. No personal or page data is included in that request.</p>
-<p>Open source: <a href="https://github.com/hodkovickybuh/pavel-editor">github.com/hodkovickybuh/pavel-editor</a></p>
-</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAVEL EDITOR · Privacy policy</title>
+<meta name="description" content="What PAVEL EDITOR does with your data: no collection, no analytics, no accounts. Every network request and every storage key it uses, listed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy-900: #00225a; --navy-700: #123a86; --blue-500: #2f5fd0; --blue-100: #e6ecfa;
+  --paper: #fff; --surface: #f8f9fb; --surface-2: #eef1f7;
+  --ink: #0b1220; --ink-soft: #46536b;
+  --line: rgba(0,34,90,0.10); --line-strong: rgba(0,34,90,0.20);
+  --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px; --space-20: 80px;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-pill: 999px;
+  --text-xs: 12px; --text-sm: 14px; --text-base: 16px; --text-lg: 18px; --text-2xl: 28px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: Inter, -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: var(--text-base); line-height: 1.7; -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: "DM Sans", Inter, system-ui, sans-serif; color: var(--navy-900); letter-spacing: -0.02em; line-height: 1.2; margin: 0; }
+p, ul { margin: 0; }
+a { color: var(--navy-700); }
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em;
+  background: var(--surface-2); border-radius: var(--radius-sm); padding: 2px 6px; color: var(--navy-900);
+  overflow-wrap: anywhere;
+}
+.wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 var(--space-6); }
+
+.top { border-bottom: 1px solid var(--line); background: var(--paper); }
+.top .wrap { display: flex; align-items: center; gap: var(--space-4); min-height: 68px; }
+.brand { display: inline-flex; align-items: center; min-height: 44px; gap: var(--space-3); font-family: "DM Sans", sans-serif; font-weight: 700; color: var(--navy-900); text-decoration: none; }
+.brand-mark { width: 26px; height: 26px; flex: none; border-radius: var(--radius-sm); background: linear-gradient(140deg, var(--navy-700), var(--navy-900)); }
+.top nav { margin-left: auto; display: flex; gap: var(--space-5); }
+.top nav a { font-size: var(--text-sm); color: var(--ink-soft); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
+.top nav a:hover { color: var(--navy-900); }
+
+header.page { padding: var(--space-20) 0 var(--space-10); background: linear-gradient(180deg, #fff, var(--surface)); border-bottom: 1px solid var(--line); }
+header.page h1 { font-size: clamp(30px, 4.5vw, 46px); }
+header.page p { margin-top: var(--space-5); color: var(--ink-soft); font-size: var(--text-lg); }
+.meta { margin-top: var(--space-6); font-size: var(--text-sm); color: var(--ink-soft); }
+
+.headline {
+  margin-top: var(--space-8); padding: var(--space-6);
+  background: var(--blue-100); border-radius: var(--radius-md);
+  font-family: "DM Sans", sans-serif; font-size: var(--text-lg); color: var(--navy-900);
+}
+
+section { padding: var(--space-12) 0; border-bottom: 1px solid var(--line); }
+section h2 { font-size: var(--text-2xl); }
+section > .wrap > p + p, section > .wrap > h3 { margin-top: var(--space-5); }
+section h3 { font-size: var(--text-lg); }
+ul { padding-left: var(--space-5); margin-top: var(--space-4); }
+li { margin-bottom: var(--space-2); }
+li::marker { color: var(--blue-500); }
+
+.table-scroll { overflow-x: auto; margin-top: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-md); }
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); min-width: 560px; }
+th, td { text-align: left; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); vertical-align: top; }
+th { background: var(--surface); font-weight: 600; color: var(--navy-900); white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+
+.yesno { display: grid; gap: var(--space-3); margin-top: var(--space-6); }
+.yesno div { display: flex; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); font-size: var(--text-sm); }
+.yesno b { flex: none; width: 78px; font-family: ui-monospace, Menlo, monospace; font-size: var(--text-xs); padding-top: 3px; }
+.yesno .no b { color: #8a2b2b; }
+.yesno .yes b { color: #1c6b3f; }
+
+footer { padding: var(--space-12) 0 var(--space-20); font-size: var(--text-sm); color: var(--ink-soft); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: var(--space-4); justify-content: space-between; }
+
+@media (max-width: 640px) {
+  .wrap { padding: 0 var(--space-4); }
+  header.page { padding: var(--space-12) 0 var(--space-8); }
+  .top nav { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <a class="brand" href="demo/index.html"><span class="brand-mark"></span> PAVEL EDITOR</a>
+    <nav>
+      <a href="demo/index.html">Playground</a>
+      <a href="demo/install.html">Install guide</a>
+      <a href="https://github.com/hodkovickybuh/pavel-editor">Source</a>
+    </nav>
+  </div>
+</div>
+
+<header class="page">
+  <div class="wrap">
+    <h1>Privacy policy</h1>
+    <p>PAVEL EDITOR is a visual editor that runs inside a web page you are already looking at. It has no server, no account and nothing to log in to.</p>
+    <div class="headline">It collects nothing. No analytics, no telemetry, no tracking, no profiles, no cookies of its own. Nothing you edit is sent to us, because there is no us to send it to.</div>
+    <p class="meta">Applies to the PAVEL EDITOR Chrome extension and to the script distributed from this repository · Version 1.9.2 · Last updated 30 July 2026</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>What the extension can access, and when</h2>
+    <p>The extension declares two permissions and no host permissions:</p>
+    <ul>
+      <li><code>activeTab</code> — access to a single tab, granted by Chrome at the moment you click the toolbar icon, and only for that tab. It cannot read a page you have not clicked the icon on, it has no list of the sites you visit, and it does not run in the background waiting for one.</li>
+      <li><code>scripting</code> — the ability to inject the editor's script into that tab once the click has granted access.</li>
+    </ul>
+    <p>There is a service worker, and it contains exactly one thing: a listener that injects the editor when you click the icon. It observes nothing else.</p>
+    <p>Once injected, the editor necessarily reads the page in front of you: its elements, styles, text and stylesheets. That is what an editor is. Everything it reads stays in that tab's memory and in that browser's own storage, unless you deliberately export it (see below).</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Every network request it makes</h2>
+    <p>Three, all listed. There are no others, and you can verify that by searching the source for <code>fetch</code>.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Request</th><th>When</th><th>What it carries</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>data.jsdelivr.com</code><br>version check</td>
+            <td>Once per session, when the editor is opened</td>
+            <td>Nothing of yours. It asks the public jsDelivr API for the list of released versions so the panel can tell you a newer one exists. Like any HTTP request, jsDelivr will see your IP address, user agent and the time; it is not told which page you are on or anything you edited. If the request fails or is blocked, nothing happens except that you do not get the update banner.</td>
+          </tr>
+          <tr>
+            <td><code>127.0.0.1:7331/ping</code><br>bridge detection</td>
+            <td>Only on a local page (<code>localhost</code>, <code>127.0.0.1</code>, <code>*.local</code>), when the editor is opened</td>
+            <td>Nothing. It asks whether you are running the optional local bridge on your own machine. It never leaves your computer, and it is not attempted at all on a public site.</td>
+          </tr>
+          <tr>
+            <td><code>127.0.0.1:7331/report</code><br>APPLY TO CODE</td>
+            <td>Only when you press the button, and only if you started the bridge yourself</td>
+            <td>The report: the CSS properties you changed, the rules and files they belong to, any text you edited, and any notes you wrote. It goes to a program running on your own machine, which writes it into a folder in your own project. Nothing about it touches the internet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top: var(--space-6)">If you load the editor from the jsDelivr CDN instead of the extension, then, exactly as with any script tag, jsDelivr serves the file and sees the request for it. The extension does not do this: it ships the script inside itself.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What is stored, and where</h2>
+    <p>In your browser only, under the origin of the page you are editing. Nothing is stored by us, and nothing is synced anywhere.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Key</th><th>Where</th><th>What it holds</th></tr></thead>
+        <tbody>
+          <tr><td><code>pavel-editor-v1&lt;path&gt;</code></td><td>sessionStorage</td><td>Your unapplied edits for that page, so a reload or a dev-server rebuild does not lose an hour of work. Cleared when you close the tab.</td></tr>
+          <tr><td><code>pe-variant-A</code>, <code>pe-variant-B</code></td><td>sessionStorage</td><td>The two saved A/B directions. Cleared when you close the tab.</td></tr>
+          <tr><td><code>pe-recent-colors</code></td><td>localStorage</td><td>The last eight colours you picked, so the swatch row is useful.</td></tr>
+          <tr><td><code>pe-open-groups</code>, <code>pe-panel-pos</code></td><td>localStorage</td><td>Which inspector groups you left open and where you dragged the panel.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top: var(--space-6)">While the editor is open it also adds one <code>&lt;style&gt;</code> element and a <code>data-pe-id</code> attribute to the elements you have edited, so it can preview your changes without touching the page's own inline styles. Those live in the page's memory and disappear on reload. Clearing your browser storage for a site removes everything above.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Things you export, deliberately</h2>
+    <p>Two, both of which require you to press something:</p>
+    <ul>
+      <li><b>COPY FOR AI</b> writes the report to your clipboard. Where it goes next is entirely your choice: an assistant, a colleague, a note. The editor does not send it anywhere.</li>
+      <li><b>Save session</b> downloads the change-set as a JSON file to your own machine.</li>
+    </ul>
+    <p>Images you drag onto the page to preview a swap are never uploaded. They are held as a temporary in-memory URL, and the report only names the file so whoever applies it knows which asset to ask you for.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Plainly, then</h2>
+    <div class="yesno">
+      <div class="no"><b>never</b><span>Analytics, telemetry, crash reporting, session replay, fingerprinting, advertising identifiers, or any third-party SDK. There are no third-party libraries in the shipped bundle beyond React, which makes no network calls.</span></div>
+      <div class="no"><b>never</b><span>Sending your page content, your edits, your keystrokes, your credentials or your browsing history to us or to anyone else.</span></div>
+      <div class="no"><b>never</b><span>Selling, renting or sharing data. There is none to sell.</span></div>
+      <div class="no"><b>never</b><span>Running on a page you have not opened it on.</span></div>
+      <div class="yes"><b>only</b><span>A version check against a public CDN, a localhost check for the optional bridge, and whatever you export by pressing a button.</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Children, and legal bases</h2>
+    <p>The editor is a developer and designer tool, not directed at children, and it does not knowingly process anyone's personal data at all. Since no personal data is collected, there is nothing to request access to, correct, export or erase, and no transfer of data across borders takes place. If you are assessing this under the GDPR, the honest summary is that no processing by us occurs: the software runs locally in your browser.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Verify it yourself</h2>
+    <p>This policy describes a program whose entire source is public and small enough to read. The claims above map to specific lines:</p>
+    <ul>
+      <li>Permissions: <code>extension/manifest.json</code></li>
+      <li>The one thing the service worker does: <code>extension/background.js</code>, nine lines</li>
+      <li>Every network call: search <code>src/</code> for <code>fetch(</code>, which returns the three above</li>
+      <li>Every storage key: search <code>src/</code> for <code>sessionStorage</code> and <code>localStorage</code></li>
+      <li>The bridge, which never writes to your source files: <code>bin/bridge.mjs</code></li>
+    </ul>
+    <p>If you find anything on this page that the code contradicts, that is a bug in the policy and worth <a href="https://github.com/hodkovickybuh/pavel-editor/issues">opening an issue</a> about.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Changes, and contact</h2>
+    <p>If this policy changes, the updated date at the top changes with it and the old version stays in the repository's git history, which is a more honest changelog than a paragraph promising to notify you. Questions go to the <a href="https://github.com/hodkovickybuh/pavel-editor/issues">issue tracker</a>, which is public, so please do not put anything private in one.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>PAVEL EDITOR · MIT · <a href="https://github.com/hodkovickybuh/pavel-editor">source on GitHub</a></span>
+    <span><a href="demo/install.html">Install guide</a> · <a href="demo/index.html">Playground</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
