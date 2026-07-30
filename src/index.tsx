@@ -214,6 +214,17 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     }
   }, [standalone]);
 
+  // loading the bundle again means "open it" (see main.tsx): un-hide instead of
+  // leaving the second click doing nothing
+  useEffect(() => {
+    const show = () => {
+      setArmed(true);
+      setOn(true);
+    };
+    window.addEventListener("pavel-editor:show", show);
+    return () => window.removeEventListener("pavel-editor:show", show);
+  }, []);
+
   // once per session, ask jsDelivr's data API for the newest release tag and
   // offer the zip when this copy is older; sideloaded copies (friends with the
   // zip) have no other update channel at all
@@ -1143,7 +1154,9 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         data-editmode-ui=""
         className="pe-btn on"
         onClick={() => setOn(true)}
-        style={{ position: "fixed", bottom: 14, right: 14, zIndex: 2147483000, height: 30, letterSpacing: "0.12em" }}
+        // max z-index: the pill shares the corner with chat launchers (Intercom
+        // sits at 2147483000 too) and must never end up underneath one
+        style={{ position: "fixed", bottom: 14, right: 14, zIndex: 2147483647, height: 30, letterSpacing: "0.12em" }}
       >
         ✎ EDIT
       </button>

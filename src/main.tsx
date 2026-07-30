@@ -14,11 +14,28 @@ declare global {
 }
 
 (() => {
-  if (window.__PAVEL_EDITOR__) return; // loading twice must not mount twice
   // inside the editor's own device frame the PARENT is the editor; a second
   // copy in here would stack panel on panel
   if (new URLSearchParams(window.location.search).has("pe-frame") || window.name === "pavel-editor-frame") return;
-  window.__PAVEL_EDITOR__ = true;
+  const w = window as unknown as { __PAVEL_EDITOR__?: boolean; __PAVEL_EDITOR_UNMOUNT__?: () => void };
+  if (w.__PAVEL_EDITOR__) {
+    // a second load is the user ASKING AGAIN (toolbar re-click, console line
+    // pasted twice) after hiding the editor with ✕. Returning silently was a
+    // dead end: the only way back was the corner pill, and on a page with its
+    // own bottom-right widget that pill is easy to miss. Wake the live copy.
+    if (document.querySelector("[data-editmode-ui]")) {
+      window.dispatchEvent(new Event("pavel-editor:show"));
+      return;
+    }
+    // flag set but nothing on the page: the host framework wiped the mount
+    // (route change, hydration). Retire the corpse and mount fresh.
+    try {
+      w.__PAVEL_EDITOR_UNMOUNT__?.();
+    } catch {
+      /* already gone */
+    }
+  }
+  w.__PAVEL_EDITOR__ = true;
   const mount = () => {
     const host = document.createElement("div");
     host.setAttribute("data-editmode-ui", "");
