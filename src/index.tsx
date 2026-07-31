@@ -41,15 +41,18 @@
  *            margin-bottom, so its total height is unchanged and nothing below
  *            shifts.
  *
- * THE DEVICE FRAME: the viewport emulator swaps the edit target to a same-origin
- * iframe (see Frame.tsx and context.ts). The panel, store and undo history stay
- * in the parent; only the canvas changes. Every DOM touch in this file goes
- * through edWin()/edDoc() so the switch is one function call.
+ * THE VIEWPORT CANVAS: several same-origin iframes, live at once, each running
+ * the page's real media queries at its real width (see Frames.tsx and
+ * context.ts). The panel, the store and one undo history stay in the parent;
+ * only the canvas changes. The frame the pointer is in becomes the edit target,
+ * so an edit lands in THAT frame's band while the others hold their own values
+ * and show the change through the same compiled stylesheet. Every DOM touch in
+ * this file goes through edWin()/edDoc(), which is what made this possible.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { csOf, edDoc, edWin, isElem, setEditTarget } from "./context";
+import { csOf, edDoc, edWin, isElem, setEditTarget, setRealms, type Realm } from "./context";
 import {
   type NumProp,
   fromDomPath,
@@ -77,7 +80,7 @@ import { bucketLabel, bucketOf, store, type Change, type EditState } from "./sto
 import { VERSION } from "./version";
 import { Overlay } from "./Overlay";
 import { Panel, type MoveMode, type Tab } from "./Panel";
-import { Frame, type FrameSpec } from "./Frame";
+import { Frames, DEFAULT_FRAMES, type FrameSpec } from "./Frames";
 import { UI } from "./theme";
 import { EDITOR_CSS } from "./styles";
 
@@ -178,9 +181,15 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   const [reducedMotion, setReducedMotion] = useState(false);
   /** the local bridge's cwd when one is listening, so edits can go to the code */
   const [bridge, setBridge] = useState<string | null>(null);
-  /** the device frame, and the realm handle once its document is ready */
-  const [frameSpec, setFrameSpec] = useState<FrameSpec | null>(null);
-  const [frameRealm, setFrameRealm] = useState<{ win: Window; doc: Document } | null>(null);
+  /** THE VIEWPORT CANVAS: several live frames at once, null when closed. The
+      frame the pointer is in becomes the edit target, so a change lands in that
+      frame's breakpoint band; every frame is painted by the same store. */
+  const [frames, setFrames] = useState<FrameSpec[] | null>(null);
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const realmsRef = useRef(new Map<number, Realm>());
+  const activeIdRef = useRef<number | null>(null);
+  /** the active frame's document, so the overlay can be portalled into it */
+  const [frameRealm, setFrameRealm] = useState<Realm | null>(null);
   /** forces overlay + panel to re-measure: scroll, resize, each drag frame */
   const [tick, setTick] = useState(0);
   /** bumps when the edit target changes realm, so listeners re-bind */
@@ -217,6 +226,30 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
   }, []);
 
   const bump = useCallback(() => setTick((t) => t + 1), []);
+
+  /** make the realm belonging to `win` the edit target, and carry the selection
+      across: the same element in another viewport is still the thing you meant */
+  const activateRealmFor = useCallback(
+    (win: Window) => {
+      let hit: [number, Realm] | null = null;
+      for (const entry of realmsRef.current.entries()) if (entry[1].win === win) hit = entry;
+      if (!hit) return;
+      const [id, realm] = hit;
+      if (activeIdRef.current === id) return;
+      const paths = selRef.current.map((el) => store.pathOf(el));
+      setEditTarget(realm.win, realm.doc);
+      store.invalidate();
+      activeIdRef.current = id;
+      setActiveId(id);
+      setFrameRealm(realm);
+      const mapped = paths.map((p) => fromDomPath(p, realm.doc)).filter((el): el is HTMLElement => Boolean(el));
+      setSelection(mapped);
+      setHover(null);
+      setRealmTick((t) => t + 1);
+    },
+    [setSelection],
+  );
+
 
   // the editor's own stylesheet, injected once and scoped to [data-editmode-ui]
   useEffect(() => {
@@ -293,11 +326,24 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     return () => tag.remove();
   }, [reducedMotion, realmTick]);
 
-  // once per session, ask jsDelivr's data API for the newest release tag and
-  // offer the zip when this copy is older; sideloaded copies (friends with the
-  // zip) have no other update channel at all
+  /**
+   * The update banner, which now has three audiences and only one of them needs
+   * telling anything.
+   *
+   * Installed from the Chrome Web Store, Chrome updates the extension itself,
+   * usually within hours, and a banner asking you to download a zip would be
+   * wrong. A store install is the one that carries an `update_url` in its
+   * manifest; a folder loaded through developer mode does not, and a copy loaded
+   * from a CDN or the bridge is not an extension at all.
+   */
   useEffect(() => {
     if (!on) return;
+    try {
+      const rt = (globalThis as { chrome?: { runtime?: { getManifest?: () => { update_url?: string } } } }).chrome?.runtime;
+      if (rt?.getManifest?.().update_url) return; // the store keeps this copy current
+    } catch {
+      /* not an extension context: fall through to the version check */
+    }
     fetch("https://data.jsdelivr.com/v1/package/gh/hodkovickybuh/pavel-editor")
       .then((r) => r.json())
       .then((j: { versions?: string[] }) => {
@@ -377,13 +423,13 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
 
   // the parent page must not scroll behind the device frame
   useEffect(() => {
-    if (!frameSpec) return;
+    if (!frames) return;
     const prev = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
     return () => {
       document.documentElement.style.overflow = prev;
     };
-  }, [frameSpec]);
+  }, [frames]);
 
   /* -------------------------------------------------------------- helpers */
 
@@ -1056,38 +1102,53 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       bump();
     };
 
-    // bound on the TARGET realm (the iframe when the device frame is open);
-    // keyboard also on the parent so shortcuts work while the panel has focus
-    const w = edWin();
-    w.addEventListener("pointerdown", onDown, true);
-    w.addEventListener("pointermove", onMove, true);
-    w.addEventListener("pointerup", onUp, true);
-    w.addEventListener("pointercancel", onCancel, true);
-    w.addEventListener("keydown", onKey, true);
-    w.addEventListener("click", swallow, true);
-    w.addEventListener("dblclick", onDouble, true);
-    w.addEventListener("dragover", onDragOver, true);
-    w.addEventListener("drop", onDrop, true);
-    const alsoParent = w !== window;
-    if (alsoParent) window.addEventListener("keydown", onKey, true);
+    // Bound on EVERY open realm, not just the active one. With three viewports
+    // live, a pointer event has to be able to arrive from any of them, and the
+    // frame it arrives from becomes the edit target BEFORE the handler reads
+    // edDoc(). That switch is a synchronous module assignment on purpose;
+    // waiting for React state here would pick the wrong document.
+    const bound: Array<[Window, string, EventListener]> = [];
+    const bind = (w: Window, type: string, fn: EventListener, activates = true) => {
+      const wrapped: EventListener = (e) => {
+        if (activates && w !== edWin()) activateRealmFor(w);
+        fn(e);
+      };
+      w.addEventListener(type, wrapped, true);
+      bound.push([w, type, wrapped]);
+    };
+
+    const live = [...realmsRef.current.values()].filter((r) => r.win && r.doc);
+    const targets: Window[] = frames && live.length ? live.map((r) => r.win) : [edWin()];
+
+    for (const w of targets) {
+      bind(w, "pointerdown", onDown as EventListener);
+      bind(w, "pointermove", onMove as EventListener);
+      bind(w, "pointerup", onUp as EventListener);
+      bind(w, "pointercancel", onCancel as EventListener);
+      bind(w, "keydown", onKey as EventListener, false);
+      bind(w, "click", swallow, false);
+      bind(w, "dblclick", onDouble as EventListener);
+      bind(w, "dragover", onDragOver as EventListener);
+      bind(w, "drop", onDrop as EventListener);
+    }
+    // the panel lives in the parent, so shortcuts have to work from there too
+    if (!targets.includes(window)) bind(window, "keydown", onKey as EventListener, false);
+
     return () => {
-      w.removeEventListener("pointerdown", onDown, true);
-      w.removeEventListener("pointermove", onMove, true);
-      w.removeEventListener("pointerup", onUp, true);
-      w.removeEventListener("pointercancel", onCancel, true);
-      w.removeEventListener("keydown", onKey, true);
-      w.removeEventListener("click", swallow, true);
-      w.removeEventListener("dblclick", onDouble, true);
-      w.removeEventListener("dragover", onDragOver, true);
-      w.removeEventListener("drop", onDrop, true);
-      if (alsoParent) window.removeEventListener("keydown", onKey, true);
+      for (const [w, type, fn] of bound) {
+        try {
+          w.removeEventListener(type, fn, true);
+        } catch {
+          /* that realm is already gone */
+        }
+      }
       try {
         edDoc().body.style.cursor = "";
       } catch {
         /* the iframe realm may already be gone */
       }
     };
-  }, [on, interact, realmTick, pick, setSelection, flash, bump, nudge, copyStyle, pasteStyle, hideSelection, changes, startTextEdit]);
+  }, [on, interact, frames, realmTick, pick, setSelection, flash, bump, nudge, copyStyle, pasteStyle, hideSelection, changes, startTextEdit, activateRealmFor]);
 
   /* ------------------------------------------------------ align & distribute */
 
@@ -1205,53 +1266,81 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
     [flash, bump],
   );
 
-  /* --------------------------------------------------------- device frame */
+  /* ------------------------------------------------------- viewport canvas */
 
-  const openFrame = useCallback(
-    (spec: FrameSpec) => {
-      setSelection([]);
-      setHover(null);
-      setFrameSpec(spec);
-    },
-    [setSelection],
-  );
-
-  const onFrameReady = useCallback(
-    (win: Window, doc: Document) => {
-      // a cached OLD bundle inside the frame may have mounted its own editor
-      // before this guard generation existed; retire it
-      try {
-        const w = win as unknown as { __PAVEL_EDITOR__?: boolean; __PAVEL_EDITOR_UNMOUNT__?: () => void };
-        w.__PAVEL_EDITOR_UNMOUNT__?.();
-        w.__PAVEL_EDITOR__ = true;
-        doc.querySelectorAll("[data-editmode-ui]").forEach((n) => n.remove());
-      } catch {
-        /* cross-origin frame or torn-down realm: nothing to retire */
+  /** a frame reporting its realm, or reporting that it is gone */
+  const onRealm = useCallback(
+    (id: number, win: Window | null, doc: Document | null) => {
+      if (!win || !doc) {
+        realmsRef.current.delete(id);
+        if (activeIdRef.current === id) {
+          activeIdRef.current = null;
+          setActiveId(null);
+          setFrameRealm(null);
+          setEditTarget(null);
+        }
+      } else {
+        // a cached OLD bundle inside the frame may have mounted its own editor;
+        // retire it rather than stacking panel on panel
+        try {
+          const w = win as unknown as { __PAVEL_EDITOR__?: boolean; __PAVEL_EDITOR_UNMOUNT__?: () => void };
+          w.__PAVEL_EDITOR_UNMOUNT__?.();
+          w.__PAVEL_EDITOR__ = true;
+          doc.querySelectorAll("[data-editmode-ui]").forEach((n) => n.remove());
+        } catch {
+          /* cross-origin or torn down: nothing to retire */
+        }
+        realmsRef.current.set(id, { win, doc });
       }
-      setEditTarget(win, doc);
-      // the frame is a different document: its breakpoints and tokens are its own
+
+      const live = [...realmsRef.current.values()];
+      setRealms(live);
       store.invalidate();
-      setFrameRealm({ win, doc });
-      setSelection([]);
-      setHover(null);
-      // the frame is a fresh page load: re-apply the session's edits into it
-      const timers = [100, 600, 1600].map((ms) => window.setTimeout(() => store.restoreFromStorage(), ms));
-      void timers;
+
+      if (win && doc && activeIdRef.current === null) {
+        setEditTarget(win, doc);
+        activeIdRef.current = id;
+        setActiveId(id);
+        setFrameRealm({ win, doc });
+      }
+      // each frame is a fresh page load: paint the session into it. Repeated
+      // because a single pass lands mid-hydration on framework pages.
+      [80, 500, 1400].forEach((ms) =>
+        window.setTimeout(() => {
+          store.syncSheet();
+          store.restoreFromStorage();
+        }, ms),
+      );
       setRealmTick((t) => t + 1);
     },
-    [setSelection],
+    [],
   );
 
-  const closeFrame = useCallback(() => {
-    setEditTarget(null);
-    store.invalidate();
-    setFrameRealm(null);
-    setFrameSpec(null);
+  const openCanvas = useCallback(() => {
     setSelection([]);
     setHover(null);
-    // edits made inside the frame exist only in ITS document; the parent page
-    // needs them re-applied now that it is the canvas again
-    [50, 400].forEach((ms) => window.setTimeout(() => store.restoreFromStorage(), ms));
+    setFrames(DEFAULT_FRAMES());
+  }, [setSelection]);
+
+  const closeCanvas = useCallback(() => {
+    realmsRef.current.clear();
+    setRealms([]);
+    setEditTarget(null);
+    store.invalidate();
+    activeIdRef.current = null;
+    setActiveId(null);
+    setFrameRealm(null);
+    setFrames(null);
+    setSelection([]);
+    setHover(null);
+    // the edits live in the store, not in those documents: paint them back into
+    // the host page now that it is the canvas again
+    [50, 400].forEach((ms) =>
+      window.setTimeout(() => {
+        store.syncSheet();
+        store.restoreFromStorage();
+      }, ms),
+    );
     setRealmTick((t) => t + 1);
   }, [setSelection]);
 
@@ -1307,7 +1396,16 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
       {/* the overlay draws in whichever document is the canvas */}
       {frameRealm ? createPortal(overlayEl, frameRealm.doc.body) : overlayEl}
 
-      {frameSpec && <Frame spec={frameSpec} onChange={setFrameSpec} onReady={onFrameReady} onClose={closeFrame} />}
+      {frames && (
+        <Frames
+          frames={frames}
+          setFrames={setFrames}
+          onRealm={onRealm}
+          onActive={setActiveId}
+          onClose={closeCanvas}
+          activeId={activeId}
+        />
+      )}
 
       <Panel
         mode={mode}
@@ -1370,7 +1468,7 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
           setOn(false);
           setSelection([]);
           setHover(null);
-          closeFrame();
+          closeCanvas();
         }}
         showKeys={showKeys}
         setShowKeys={setShowKeys}
@@ -1379,9 +1477,9 @@ export function EditMode({ standalone = false }: { standalone?: boolean }) {
         variantSaved={variantSaved}
         activeVariant={activeVariant}
         onVariant={variant}
-        frameSpec={frameSpec}
-        onOpenFrame={() => openFrame({ w: 390, h: 844, label: "iPhone 14" })}
-        onCloseFrame={closeFrame}
+        frameSpec={frames ? frames.length : null}
+        onOpenFrame={openCanvas}
+        onCloseFrame={closeCanvas}
         root={root}
         setHover={setHover}
         tick={tick}

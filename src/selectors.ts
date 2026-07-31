@@ -560,8 +560,10 @@ export function domPath(el: Element) {
   return parts.join(">");
 }
 
-export function fromDomPath(path: string): HTMLElement | null {
-  let node: Element | null = edDoc().body;
+/** `doc` is explicit when resolving into a realm that is not the active one:
+    the viewport canvas paints the same change into every frame it has open */
+export function fromDomPath(path: string, doc: Document = edDoc()): HTMLElement | null {
+  let node: Element | null = doc.body;
   for (const part of path.split(">")) {
     const m = /^(.+):nth-child\((\d+)\)$/.exec(part);
     if (!node || !m) return null;

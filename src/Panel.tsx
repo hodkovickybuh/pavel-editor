@@ -37,7 +37,6 @@ import { bucketOf, bucketLabel, changeKey, store, type EditState } from "./store
 import { runAudit, type Finding } from "./audit";
 import { csOf } from "./context";
 import type { Change } from "./store";
-import type { FrameSpec } from "./Frame";
 
 export type Tab = "design" | "layers" | "changes" | "audit";
 export type MoveMode = "push" | "isolate";
@@ -754,7 +753,8 @@ export function Panel({
   variantSaved: { A: boolean; B: boolean };
   activeVariant: "A" | "B" | null;
   onVariant: (slot: "A" | "B", save: boolean) => void;
-  frameSpec: FrameSpec | null;
+  /** how many viewports are open, or null when the canvas is closed */
+  frameSpec: number | null;
   onOpenFrame: () => void;
   onCloseFrame: () => void;
   root: HTMLElement | null;
@@ -877,8 +877,8 @@ export function Panel({
         <span className="pe-title">
           <b>PAVEL</b> EDITOR
         </span>
-        <span className="pe-chip" title={`edits made now are scoped to ${band}`}>
-          {frameSpec ? `${frameSpec.w}×${frameSpec.h}` : band}
+        <span className="pe-chip" title={frameSpec ? "the frame you point at is the one you edit" : `edits made now are scoped to ${band}`}>
+          {frameSpec ? `${frameSpec} viewport${frameSpec === 1 ? "" : "s"}` : band}
         </span>
         <span style={{ flex: 1 }} />
         <button className={`pe-help${showKeys ? " on" : ""}`} onClick={() => setShowKeys(!showKeys)} title="keys & gestures · ?">
@@ -913,8 +913,12 @@ export function Panel({
                 ✎ mark
               </button>
             </div>
-            <button className={`pe-btn${frameSpec ? " on" : ""}`} onClick={() => (frameSpec ? onCloseFrame() : onOpenFrame())} title="preview and edit at a real device size">
-              ▢ device
+            <button
+              className={`pe-btn${frameSpec ? " on" : ""}`}
+              onClick={() => (frameSpec ? onCloseFrame() : onOpenFrame())}
+              title="phone, tablet and laptop side by side, all live, all editable"
+            >
+              ▥ viewports
             </button>
             <button
               className={`pe-btn${interact ? " on" : ""}`}
@@ -1357,10 +1361,10 @@ export function Panel({
           {updateTo && (
             <div className="pe-update">
               <span>v{updateTo} is out</span>
-              <a href="https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip" target="_blank" rel="noreferrer">
-                ⬇ download
+              <a href="https://chromewebstore.google.com/detail/pavel-editor/mdikbgnenoiffkklejhflpmfdkpngihh" target="_blank" rel="noreferrer">
+                get it from the Chrome Web Store
               </a>
-              <span style={{ color: "var(--pe-dim)" }}>then re-drag the folder in chrome://extensions</span>
+              <span style={{ color: "var(--pe-dim)" }}>one click, and it stays current by itself</span>
             </div>
           )}
 

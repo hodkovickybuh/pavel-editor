@@ -27,7 +27,7 @@ import {
   tokenFor,
   winningRuleFor,
 } from "./selectors";
-import { edWin, isElem } from "./context";
+import { allRealms, edWin, isElem } from "./context";
 import { looksTailwind, tailwindFor } from "./tailwind";
 
 export type ChangeProp = NumProp | string;
@@ -144,17 +144,17 @@ function describeFor(el: HTMLElement, prop: string) {
   return d;
 }
 
-function resolveTarget(c: Pick<Change, "path" | "rtSel" | "rtIdx">): HTMLElement | null {
+function resolveTarget(c: Pick<Change, "path" | "rtSel" | "rtIdx">, doc: Document = edWin().document): HTMLElement | null {
   if (c.rtSel) {
     try {
-      const list = edWin().document.querySelectorAll<HTMLElement>(c.rtSel);
+      const list = doc.querySelectorAll<HTMLElement>(c.rtSel);
       const el = list[c.rtIdx ?? 0] ?? list[0];
       if (el && isElem(el)) return el;
     } catch {
       /* fall through to the path */
     }
   }
-  return fromDomPath(c.path);
+  return fromDomPath(c.path, doc);
 }
 
 type Snapshot = { key: string; before: Change | undefined; after: Change | undefined };
@@ -211,6 +211,19 @@ class EditStore {
     this.listeners.forEach((fn) => fn());
   }
 
+  /**
+   * Run a write against the SAME element in every open viewport. Style changes
+   * ride the compiled stylesheet, but text and image swaps are DOM writes, and
+   * without this they would appear in the frame you happened to be pointing at
+   * and nowhere else.
+   */
+  private eachEl(c: Pick<Change, "path" | "rtSel" | "rtIdx">, fn: (el: HTMLElement) => void) {
+    for (const realm of allRealms()) {
+      const el = resolveTarget(c, realm.doc);
+      if (el) fn(el);
+    }
+  }
+
   /** the change key for the CURRENT band and state */
   keyOf = (path: string, prop: string) => changeKey(path, prop, bucketOf(), this.state);
 
@@ -244,14 +257,23 @@ class EditStore {
    * scrub previews use inline-important, which outranks even that, then unwind.
    */
   syncSheet() {
-    const doc = edWin().document;
+    for (const realm of allRealms()) this.syncSheetIn(realm.doc);
+  }
+
+  /**
+   * Compile the change-set into ONE stylesheet inside a given document. Called
+   * once per open viewport, which is what makes an edit made at 390px show up
+   * in the tablet and desktop frames at the same instant, each still obeying the
+   * media query of the band it was made in.
+   */
+  private syncSheetIn(doc: Document) {
     /** `${bucket}|${state}|${id}` -> declarations */
     const decls = new Map<string, string[]>();
     const push = (k: string, decl: string) => decls.set(k, [...(decls.get(k) ?? []), decl]);
     for (const c of this.changes.values()) {
       if (!c.bucket) continue;
       if (c.prop === "text" || c.prop === "note" || c.prop === "image" || c.prop === "order") continue;
-      const el = resolveTarget(c);
+      const el = resolveTarget(c, doc);
       if (!el) continue;
       let id = this.pathIds.get(c.path);
       if (!id) {
@@ -299,18 +321,18 @@ class EditStore {
     this.previewOff = !this.previewOff;
     for (const c of this.changes.values()) {
       if (c.prop === "text") {
-        const el = resolveTarget(c);
-        if (!el) continue;
-        if (this.previewOff) {
-          if (c.baseHtml != null) el.innerHTML = c.baseHtml;
-          else el.textContent = c.base;
-        } else if (c.valueHtml != null) el.innerHTML = c.valueHtml;
-        else el.textContent = c.value;
+        this.eachEl(c, (el) => {
+          if (this.previewOff) {
+            if (c.baseHtml != null) el.innerHTML = c.baseHtml;
+            else el.textContent = c.base;
+          } else if (c.valueHtml != null) el.innerHTML = c.valueHtml;
+          else el.textContent = c.value;
+        });
       } else if (c.prop === "image") {
-        const el = resolveTarget(c);
-        if (!el) continue;
         const url = this.imgUrls.get(c.key);
-        (el as HTMLImageElement).src = this.previewOff ? c.base : (url ?? c.base);
+        this.eachEl(c, (el) => {
+          (el as HTMLImageElement).src = this.previewOff ? c.base : (url ?? c.base);
+        });
       }
     }
     this.syncSheet(); // styles flip wholesale via the sheet's media attribute
@@ -395,19 +417,18 @@ class EditStore {
     // text back to originals; styles are wholesale-recompiled by the sheet
     for (const c of this.changes.values()) {
       if (c.prop !== "text") continue;
-      const el = resolveTarget(c);
-      if (!el) continue;
-      if (c.baseHtml != null) el.innerHTML = c.baseHtml;
-      else el.textContent = c.base;
+      this.eachEl(c, (el) => {
+        if (c.baseHtml != null) el.innerHTML = c.baseHtml;
+        else el.textContent = c.base;
+      });
     }
     this.changes.clear();
     for (const c of saved) {
       if (c.prop === "text") {
-        const el = resolveTarget(c);
-        if (el) {
+        this.eachEl(c, (el) => {
           if (c.valueHtml != null) el.innerHTML = c.valueHtml;
           else el.textContent = c.value;
-        }
+        });
       }
       this.changes.set(c.key, c);
     }
@@ -550,6 +571,10 @@ class EditStore {
     const next: Change = { key, path, label: d.label, file: d.file, selector: d.selector, prop: "text", base, value: text, baseHtml: before ? before.baseHtml : htmlOriginal, valueHtml: el.innerHTML, ...runtimeRef(el) };
     if (text === base) this.changes.delete(key);
     else this.changes.set(key, next);
+    // the other viewports are showing the same element: give them the new words
+    this.eachEl(next, (other) => {
+      if (other !== el) other.innerHTML = next.valueHtml ?? next.value;
+    });
     this.commit([{ key, before, after: this.changes.get(key) }]);
   }
 
@@ -696,25 +721,31 @@ class EditStore {
       this.syncSheet();
       return;
     }
-    const el = ref ? resolveTarget(ref) : fromDomPath(path);
-    if (!el) return;
     if (prop === "text") {
-      if (c) {
-        if (c.valueHtml != null) el.innerHTML = c.valueHtml;
-        else el.textContent = c.value;
-      } else {
-        const src = snap.before ?? snap.after;
-        if (src?.baseHtml != null) el.innerHTML = src.baseHtml;
-        else el.textContent = src?.base ?? el.textContent ?? "";
-      }
+      if (!ref) return;
+      this.eachEl(ref, (el) => {
+        if (c) {
+          if (c.valueHtml != null) el.innerHTML = c.valueHtml;
+          else el.textContent = c.value;
+        } else {
+          const src = snap.before ?? snap.after;
+          if (src?.baseHtml != null) el.innerHTML = src.baseHtml;
+          else el.textContent = src?.base ?? el.textContent ?? "";
+        }
+      });
       return;
     }
     if (prop === "image") {
+      if (!ref) return;
       const base = snap.before?.base ?? snap.after?.base;
       const url = this.imgUrls.get(key);
-      (el as HTMLImageElement).src = c ? (url ?? c.base) : (base ?? (el as HTMLImageElement).src);
+      this.eachEl(ref, (el) => {
+        (el as HTMLImageElement).src = c ? (url ?? c.base) : (base ?? (el as HTMLImageElement).src);
+      });
       return;
     }
+    const el = ref ? resolveTarget(ref) : fromDomPath(path);
+    if (!el) return;
     if (!cssKeyOf(prop)) return;
     el.style.setProperty(prop, c ? c.value : "");
     void c;
@@ -793,10 +824,10 @@ class EditStore {
     let applied = 0;
     for (const c of saved) {
       if (c.prop === "text") {
-        const el = resolveTarget(c);
-        if (!el) continue;
-        if (c.valueHtml != null) el.innerHTML = c.valueHtml;
-        else el.textContent = c.value;
+        this.eachEl(c, (el) => {
+          if (c.valueHtml != null) el.innerHTML = c.valueHtml;
+          else el.textContent = c.value;
+        });
       }
       this.changes.set(c.key, c);
       applied += 1;
