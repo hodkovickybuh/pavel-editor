@@ -11,10 +11,11 @@ PAVEL EDITOR lets you redesign a real, live website the way you would move thing
 **Just want to see it?** Open the [live demo](https://hodkovickybuh.github.io/pavel-editor/demo/), no install, one click, the editor is already running there.
 
 **Easiest, works everywhere: the Chrome extension.**
-1. Download `pavel-editor-extension.zip` from the repository's **Releases** page and unzip it.
-2. In Chrome, open `chrome://extensions`, switch on **Developer mode** (top right).
-3. Click **Load unpacked** and pick the unzipped folder.
-4. Pin PAVEL EDITOR to your toolbar. Now on ANY page, click the icon and the editor appears.
+1. Open [the Chrome Web Store listing](https://chromewebstore.google.com/detail/pavel-editor/mdikbgnenoiffkklejhflpmfdkpngihh) and press **Add to Chrome**.
+2. Click the puzzle-piece icon in Chrome's toolbar and pin PAVEL EDITOR.
+3. On ANY page, click the ✎ icon and the editor appears.
+
+That is it, and Chrome keeps it up to date by itself.
 
 **If the site's developer wired it in** (like uzo.com's dev setup): add `?edit=1` to the end of the address, for example `http://localhost:3000/?edit=1`.
 

@@ -233,16 +233,16 @@ pre code { background: none; color: inherit; padding: 0; }
 
 <section class="hero">
   <div class="wrap">
-    <span class="pill">Not in the Chrome Web Store yet</span>
-    <h1>Install the editor in about ninety seconds.</h1>
-    <p>The extension is not published in the Chrome Web Store, so it installs the way developers install extensions: unzip a folder, turn on developer mode, load it. Nothing is compiled, nothing runs in the background, and you can delete it by dragging the folder to the bin.</p>
+    <span class="pill">Now on the Chrome Web Store</span>
+    <h1>One click, and it is on every page.</h1>
+    <p>Add it from the Chrome Web Store, pin the icon, and click it on whatever you are working on. Chrome keeps it up to date by itself, so this is the last time you have to think about installing it.</p>
     <div class="btns">
-      <a class="btn btn-primary" href="https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip">⬇ Download the zip</a>
+      <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/pavel-editor/mdikbgnenoiffkklejhflpmfdkpngihh">✎ Add to Chrome</a>
       <a class="btn btn-ghost" href="#video">Watch the narrated walkthrough</a>
     </div>
     <div class="note">
-      <span class="note-icon">⚠</span>
-      <div><b>Why developer mode?</b> Publishing to the Web Store needs a paid developer account and a review queue. Until that is done, "Load unpacked" is the official Chrome path for running an extension from a folder. It is the same mechanism every extension developer uses daily.</div>
+      <span class="note-icon">✓</span>
+      <div><b>Reviewed by Google, and it asks for almost nothing.</b> The listing declares <code>activeTab</code> and <code>scripting</code> and no host permissions at all, which means it can reach a tab at the moment you click its icon and nothing before or after. The <a href="../privacy.html">privacy policy</a> lists every network request and storage key it uses.</div>
     </div>
   </div>
 </section>
@@ -275,21 +275,27 @@ pre code { background: none; color: inherit; padding: 0; }
 <section class="section" id="install">
   <div class="wrap">
     <p class="eyebrow">The install</p>
-    <h2>Five steps, once.</h2>
-    <p>Chrome keeps the extension after this. You only repeat it when a new version ships, and the editor tells you when that happens.</p>
+    <h2>Three steps, once.</h2>
+    <p>Then it is there on every tab, in every window, until you remove it.</p>
 
     <div class="steps">
       <div class="step">
         <div><span class="step-n">1</span></div>
         <div>
-          <h3>Download and unzip</h3>
-          <p>Grab <code>pavel-editor-extension.zip</code> from the <a href="https://github.com/hodkovickybuh/pavel-editor/releases/latest">latest release</a>. Double-click it. You want the folder that comes out, called <code>extension</code>, and you want to leave it somewhere permanent: your Documents, not Downloads. Chrome loads it from that path every time it starts, so if the folder moves the extension breaks.</p>
+          <h3>Add it from the Chrome Web Store</h3>
+          <p>Open <a href="https://chromewebstore.google.com/detail/pavel-editor/mdikbgnenoiffkklejhflpmfdkpngihh">the listing</a> and press <b>Add to Chrome</b>, then confirm. Chrome shows you what it asks for first: the ability to read and change the site you are on <em>when you click the icon</em>, which is what an editor has to be able to do.</p>
           <div class="step-figure">
             <div class="mock">
-              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">Finder · Documents</span></div>
+              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">chromewebstore.google.com/detail/pavel-editor</span></div>
               <div class="mock-body">
-                <div class="mock-folder">📁 extension/ — manifest.json · pavel-editor.js · background.js · icons/</div>
-                <p class="mock-meta">Keep the whole folder together. The manifest at its root is what Chrome reads.</p>
+                <div class="mock-card">
+                  <span class="mock-icon"></span>
+                  <div>
+                    <div class="mock-title">PAVEL EDITOR</div>
+                    <div class="mock-meta">A Figma-style visual editor for any live web page</div>
+                  </div>
+                  <span class="mock-btn hi">Add to Chrome</span>
+                </div>
               </div>
             </div>
           </div>
@@ -299,17 +305,17 @@ pre code { background: none; color: inherit; padding: 0; }
       <div class="step">
         <div><span class="step-n">2</span></div>
         <div>
-          <h3>Open the extensions page</h3>
-          <p>Type <code>chrome://extensions</code> into the address bar and press enter. You cannot get there by clicking a link, Chrome blocks that on purpose, so it has to be typed or pasted.</p>
+          <h3>Pin it to the toolbar</h3>
+          <p>Click the puzzle-piece icon in Chrome's toolbar and press the pin next to PAVEL EDITOR. Without pinning it still works, it just hides behind that puzzle piece, and a tool you have to hunt for is a tool you stop using.</p>
           <div class="step-figure">
             <div class="mock">
-              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">chrome://extensions</span></div>
+              <div class="mock-bar">
+                <div class="mock-dots"><i></i><i></i><i></i></div>
+                <span class="mock-url">https://any-site-you-are-working-on.com</span>
+                <span class="mock-pin"><span>🧩</span><span class="on">✎</span></span>
+              </div>
               <div class="mock-body">
-                <div class="mock-row">
-                  <span class="mock-title">Extensions</span>
-                  <span class="mock-toggle">Developer mode <span class="switch"></span></span>
-                </div>
-                <p class="mock-meta">The developer mode switch sits at the top right of that page.</p>
+                <p class="mock-meta">The ✎ icon is the editor.</p>
               </div>
             </div>
           </div>
@@ -319,71 +325,20 @@ pre code { background: none; color: inherit; padding: 0; }
       <div class="step">
         <div><span class="step-n">3</span></div>
         <div>
-          <h3>Turn on developer mode</h3>
-          <p>Top right of that page, one switch. Turning it on reveals three buttons on the left: <b>Load unpacked</b>, Pack extension, Update. Nothing else about your browser changes.</p>
-          <div class="step-figure">
-            <div class="mock">
-              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">chrome://extensions</span></div>
-              <div class="mock-body">
-                <div class="mock-row">
-                  <span class="mock-btn hi">Load unpacked</span>
-                  <span class="mock-btn">Pack extension</span>
-                  <span class="mock-btn">Update</span>
-                  <span class="mock-toggle">Developer mode <span class="switch"></span></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div><span class="step-n">4</span></div>
-        <div>
-          <h3>Load unpacked, and pick the folder</h3>
-          <p>Click <b>Load unpacked</b> and select the <code>extension</code> folder itself, not a file inside it and not the zip. PAVEL EDITOR appears in the list straight away. If Chrome complains about the manifest, you have selected the wrong level: go one folder in or out until you see <code>manifest.json</code> sitting at the top.</p>
-          <div class="step-figure">
-            <div class="mock">
-              <div class="mock-bar"><div class="mock-dots"><i></i><i></i><i></i></div><span class="mock-url">chrome://extensions</span></div>
-              <div class="mock-body">
-                <div class="mock-card">
-                  <span class="mock-icon"></span>
-                  <div>
-                    <div class="mock-title">PAVEL EDITOR</div>
-                    <div class="mock-meta">1.9.1 · A Figma-style visual editor for any live page</div>
-                  </div>
-                  <span class="mock-toggle"><span class="switch"></span></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div><span class="step-n">5</span></div>
-        <div>
-          <h3>Pin it, then click it on any page</h3>
-          <p>Open the puzzle-piece icon in Chrome's toolbar and pin PAVEL EDITOR so it is always one click away. Then go to any page and click the icon: the panel appears in the top right. Click it again later and a hidden editor comes straight back.</p>
-          <div class="step-figure">
-            <div class="mock">
-              <div class="mock-bar">
-                <div class="mock-dots"><i></i><i></i><i></i></div>
-                <span class="mock-url">https://any-site-you-are-working-on.com</span>
-                <span class="mock-pin"><span>🧩</span><span class="on">✎</span></span>
-              </div>
-              <div class="mock-body">
-                <p class="mock-meta">The ✎ icon is the editor. One click arms it on the tab you are looking at, and nothing runs anywhere else.</p>
-              </div>
-            </div>
-          </div>
+          <h3>Click it on any page</h3>
+          <p>The panel appears in the top right and the page becomes editable. Click the icon again later and a hidden editor comes straight back. To stop editing entirely, press ✕ in the panel: an ✎ EDIT pill stays in the corner until you want it again.</p>
         </div>
       </div>
     </div>
 
     <div class="note">
-      <span class="note-icon">✓</span>
-      <div><b>What it can and cannot see.</b> The extension asks for <code>activeTab</code> only, which means it gets access to a tab at the moment you click its icon, and to nothing before or after. It has no background page watching you, sends nothing anywhere, and stores your edits in your own browser's session storage. The source is <a href="https://github.com/hodkovickybuh/pavel-editor">public</a>, and the <a href="../privacy.html">privacy policy</a> lists every network request and storage key it uses, with the file to check each claim against.</div>
+      <span class="note-icon">↻</span>
+      <div><b>Updates happen by themselves.</b> Chrome checks the store roughly every few hours and installs new versions in the background; you can force it at <code>chrome://extensions</code> with Developer mode on and the <b>Update</b> button. The editor no longer shows an update banner when it was installed from the store, because there is nothing for you to do.</div>
+    </div>
+
+    <div class="note" style="background: var(--surface); border-color: var(--line); color: var(--ink-soft)">
+      <span class="note-icon">⚙</span>
+      <div><b>Testing an unreleased build.</b> Store review takes a day or two, so the newest code reaches <a href="https://github.com/hodkovickybuh/pavel-editor/releases/latest">the releases page</a> first. To run it: download the zip, unzip it somewhere permanent, then <code>chrome://extensions</code> → Developer mode → <b>Load unpacked</b> → pick the folder it unzipped to. Turn the store copy off while you do, or two editors will open on the same page. Chrome loads an unpacked folder from its path on every launch, so do not move it afterwards.</div>
     </div>
   </div>
 </section>
@@ -398,7 +353,7 @@ pre code { background: none; color: inherit; padding: 0; }
       <div class="method best">
         <span class="tag">Best on any site</span>
         <h3>The extension</h3>
-        <p>Works everywhere, including sites whose Content-Security-Policy blocks injected scripts: github.com, banks, most large products. Extension injection is exempt from the page's CSP, which is exactly why this exists.</p>
+        <p><a href="https://chromewebstore.google.com/detail/pavel-editor/mdikbgnenoiffkklejhflpmfdkpngihh">One click from the Chrome Web Store</a>. Works everywhere, including sites whose Content-Security-Policy blocks injected scripts: github.com, banks, most large products. Extension injection is exempt from the page's CSP, which is exactly why this exists.</p>
       </div>
       <div class="method">
         <span class="tag">Best on your own project</span>
@@ -522,12 +477,16 @@ document.body.appendChild(s);</code></pre>
         <p>Two usual causes. Either you are on a page Chrome forbids extensions from touching (<code>chrome://</code> pages, the Web Store, a new tab page), so open a normal website and try again. Or the editor is already loaded and hidden: from 1.9.1 clicking the icon a second time brings a hidden panel back, so update if you are on an older build.</p>
       </details>
       <details>
-        <summary>Chrome says the manifest is missing or invalid</summary>
-        <p>You have selected the wrong folder level. The folder you pick must have <code>manifest.json</code> directly inside it. If you picked the zip, or the folder containing the folder, Chrome cannot see the manifest.</p>
+        <summary>How do I get a new version?</summary>
+        <p>You do not have to do anything. Chrome checks the store every few hours and updates the extension in the background. To pull one immediately: <code>chrome://extensions</code>, turn on Developer mode, press <b>Update</b>. The version you have is shown on that card.</p>
       </details>
       <details>
-        <summary>The extension vanished after I restarted Chrome</summary>
-        <p>The folder moved or was deleted. Chrome loads an unpacked extension from its path every launch, so keep it somewhere permanent, then use Load unpacked once more.</p>
+        <summary>I have two editors on the page at once</summary>
+        <p>You have both the store copy and a manually loaded folder enabled. Turn one off at <code>chrome://extensions</code>.</p>
+      </details>
+      <details>
+        <summary>Chrome says the manifest is missing or invalid</summary>
+        <p>Only applies when loading an unpacked folder yourself: you have selected the wrong level. The folder you pick must have <code>manifest.json</code> directly inside it, not the zip and not the folder containing the folder.</p>
       </details>
       <details>
         <summary>The console line gives a Content-Security-Policy error</summary>

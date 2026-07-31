@@ -6,7 +6,8 @@
   "scripts": {
     "build": "esbuild src/main.tsx --bundle --format=iife --outfile=dist/pavel-editor.js --minify --define:process.env.NODE_ENV=\\\"production\\\" --jsx=automatic --target=es2020 && cp dist/pavel-editor.js extension/pavel-editor.js",
     "typecheck": "tsc --noEmit",
-    "bridge": "node bin/bridge.mjs"
+    "bridge": "node bin/bridge.mjs",
+    "package": "bun run build && rm -f pavel-editor-extension.zip && cd extension && zip -qr ../pavel-editor-extension.zip . -x \"*.DS_Store\" && cd .. && unzip -l pavel-editor-extension.zip | head -6"
   },
   "devDependencies": {
     "@types/react": "^19",

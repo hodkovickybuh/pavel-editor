@@ -103,7 +103,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: var(--space-4); justify-cont
     <h1>Privacy policy</h1>
     <p>PAVEL EDITOR is a visual editor that runs inside a web page you are already looking at. It has no server, no account and nothing to log in to.</p>
     <div class="headline">It collects nothing. No analytics, no telemetry, no tracking, no profiles, no cookies of its own. Nothing you edit is sent to us, because there is no us to send it to.</div>
-    <p class="meta">Applies to the PAVEL EDITOR Chrome extension and to the script distributed from this repository · Version 1.9.2 · Last updated 30 July 2026</p>
+    <p class="meta">Applies to the PAVEL EDITOR extension on the Chrome Web Store and to the script distributed from this repository · Version 1.10.0 · Last updated 31 July 2026</p>
   </div>
 </header>
 
@@ -115,7 +115,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: var(--space-4); justify-cont
       <li><code>activeTab</code> — access to a single tab, granted by Chrome at the moment you click the toolbar icon, and only for that tab. It cannot read a page you have not clicked the icon on, it has no list of the sites you visit, and it does not run in the background waiting for one.</li>
       <li><code>scripting</code> — the ability to inject the editor's script into that tab once the click has granted access.</li>
     </ul>
-    <p>There is a service worker, and it contains exactly one thing: a listener that injects the editor when you click the icon. It observes nothing else.</p>
+    <p>Chrome shows these to you before you install, and the Web Store listing declares the same two and nothing else. There is a service worker, and it contains exactly one thing: a listener that injects the editor when you click the icon. It observes nothing else.</p>
     <p>Once injected, the editor necessarily reads the page in front of you: its elements, styles, text and stylesheets. That is what an editor is. Everything it reads stays in that tab's memory and in that browser's own storage, unless you deliberately export it (see below).</p>
   </div>
 </section>

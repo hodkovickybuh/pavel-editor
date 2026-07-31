@@ -9,7 +9,7 @@ Then press one button and hand the whole session to your AI assistant as a repor
 
 <br>
 
-[![Download the Chrome extension](https://img.shields.io/badge/%E2%AC%87%EF%B8%8E%20%20Download%20the%20Chrome%20extension-B2D5E5?style=for-the-badge&labelColor=23212C)](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip)
+[![Add to Chrome](https://img.shields.io/badge/%E2%9C%8E%20%20Add%20to%20Chrome-B2D5E5?style=for-the-badge&labelColor=23212C)](https://chromewebstore.google.com/detail/pavel-editor/mdikbgnenoiffkklejhflpmfdkpngihh)
 [![Try the playground](https://img.shields.io/badge/%E2%96%B6%20%20Try%20the%20playground-99E1D9?style=for-the-badge&labelColor=23212C)](https://hodkovickybuh.github.io/pavel-editor/demo/)
 [![Watch the walkthrough](https://img.shields.io/badge/%F0%9F%8E%A5%20%20Watch%20the%20walkthrough-2f5fd0?style=for-the-badge&labelColor=23212C)](https://hodkovickybuh.github.io/pavel-editor/demo/install.html#video)
 [![Install guide](https://img.shields.io/badge/%F0%9F%93%96%20%20Install%20guide-8a86a8?style=for-the-badge&labelColor=23212C)](https://hodkovickybuh.github.io/pavel-editor/demo/install.html)
@@ -48,15 +48,18 @@ The loop above is silent and shows three moments from it. The full film installs
 
 ## Get it
 
-**The Chrome extension is the way.** It works on every site, including the ones that block injected scripts (github.com, banks, most big products). It is **not in the Chrome Web Store yet**, so it installs the way developers install extensions. [**⬇ Download the zip**](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip) (always the newest version), unzip it, then:
+### [**✎ Add to Chrome**](https://chromewebstore.google.com/detail/pavel-editor/mdikbgnenoiffkklejhflpmfdkpngihh)
 
-```
-1. chrome://extensions → turn on Developer mode (top right)
-2. Load unpacked → pick the unzipped `extension` folder
-3. Pin PAVEL EDITOR · click its icon on any page
-```
+One click from the Chrome Web Store. Pin it, then click the icon on any page. It works everywhere, including sites whose Content-Security-Policy blocks injected scripts (github.com, banks, most big products), because extension injection is exempt from the page's CSP. Chrome keeps it up to date by itself.
 
-> **[The full install guide](https://hodkovickybuh.github.io/pavel-editor/demo/install.html)** walks through all five steps with illustrations, a **narrated video**, ten short tutorials and a troubleshooting list. Keep the unzipped folder somewhere permanent: Chrome loads it from that path on every launch.
+> **[The guide](https://hodkovickybuh.github.io/pavel-editor/demo/install.html)** has a **narrated video**, ten short tutorials and a troubleshooting list.
+
+<details>
+<summary><b>Running the unreleased build instead</b> · for testing a version before it reaches the store</summary>
+
+Store review takes a day or two, so the newest code lands here first. To run it: [download the zip](https://github.com/hodkovickybuh/pavel-editor/releases/latest/download/pavel-editor-extension.zip), unzip it somewhere permanent, then `chrome://extensions` → Developer mode → Load unpacked → pick the unzipped folder. Chrome loads it from that path on every launch, so do not move it afterwards. Disable the store copy while you do this, or you will have two editors on the page.
+
+</details>
 
 ![the extension editing github.com itself](assets/extension-on-github.png)
 
